@@ -43,3 +43,5 @@
 @keyframes pageReveal{0%{clip-path:inset(0 100% 0 0);opacity:.5}15%{clip-path:inset(0 0 0 0);opacity:1}100%{clip-path:inset(0 0 0 0);opacity:1}}
 @keyframes heartReveal{0%{clip-path:circle(0% at 50% 50%)}20%{clip-path:circle(75% at 50% 50%)}100%{clip-path:circle(75% at 50% 50%)}}
 @keyframes curtainReveal{0%{clip-path:inset(0 50% 0 50%)}20%{clip-path:inset(0 0 0 0)}100%{clip-path:inset(0 0 0 0)}}
+
+.draftBox{background:#f2edf5;border:1px solid #dfd2e5;border-radius:14px;padding:14px;margin:12px 0 18px}.draftBox h3{margin:0 0 8px}.draftBox .actions{margin:8px 0}.draftBox button{margin-right:6px}
