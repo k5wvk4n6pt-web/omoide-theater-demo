@@ -24,3 +24,7 @@
 .musicBox{margin:20px 0;padding:14px;border-radius:14px;background:#f8f1f6;border:1px solid #eadce5}.musicBox h3{margin-top:0}.musicBox .actions button{flex:1}.musicError{color:#aa304d;font-size:13px;font-weight:600}
 
 .exportBox{margin:22px 0;padding:15px;border-radius:15px;background:#f4f0f7;border:1px solid #dfd5e8}.exportBox h3{margin-top:0}.exportBox .primary:disabled{opacity:.6}.downloadLink{display:inline-flex;align-items:center;padding:11px 14px;border:1px solid #dcd5dd;border-radius:12px;color:#63314f;text-decoration:none;font-size:14px;background:white}
+
+.designBox{margin:20px 0;padding:14px;border-radius:14px;background:#fff8f9;border:1px solid #f1dbe5}.designBox h3{margin-top:0}.designBox textarea{display:block;width:100%;border:1px solid #ded8df;border-radius:10px;padding:12px;margin-top:7px;font-size:16px;font-family:inherit;resize:vertical}
+.photoDecoration{position:absolute;inset:5px;z-index:2;pointer-events:none;border:5px solid #f7cfdf;display:flex;justify-content:space-between;align-items:flex-start;padding:8px;font-size:19px;text-shadow:0 1px 4px #0005}
+.photoDecoration.gold{border-color:#d5aa52;color:#fff2ba}.photoDecoration.soft{border-color:#f4d1e5;color:#fff}.photoDecoration.sakura{border-color:#f7cfdf}
