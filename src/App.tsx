@@ -1,5 +1,6 @@
 import {useEffect,useMemo,useRef,useState} from 'react';
 import type {CSSProperties} from 'react';
+import {exportMovie} from './exportMovie';
 type Photo={id:string;name:string;url:string;duration:number;effect:'fade'|'zoom'|'slide'};
 type Theme='theater'|'album'|'sakura'|'sparkle';
 const themes:{id:Theme;name:string;emoji:string;description:string}[]=[{id:'theater',name:'シアター',emoji:'🎭',description:'赤いカーテン'},{id:'album',name:'アルバム',emoji:'📖',description:'懐かしい思い出'},{id:'sakura',name:'さくら',emoji:'🌸',description:'卒園・卒業'},{id:'sparkle',name:'キラキラ',emoji:'✨',description:'誕生日・お祝い'}];
@@ -28,6 +29,12 @@ const [audioFile,setAudioFile]=useState<{name:string;url:string;seconds:number}|
 const [volume,setVolume]=useState(65);
 const [musicError,setMusicError]=useState('');
 const [musicPlaying,setMusicPlaying]=useState(false);
+const [exporting,setExporting]=useState(false);
+const [exportProgress,setExportProgress]=useState(0);
+const [exportError,setExportError]=useState('');
+const [exportResult,setExportResult]=useState<{url:string;name:string;blob:Blob}|null>(null);
+const exportUrl=useRef<string|null>(null);
+useEffect(()=>()=>{if(exportUrl.current)URL.revokeObjectURL(exportUrl.current)},[]);
 const photosRef=useRef<Photo[]>([]);
 useEffect(()=>{photosRef.current=photos},[photos]);
 useEffect(()=>()=>{photosRef.current.forEach(p=>URL.revokeObjectURL(p.url))},[]);
@@ -89,6 +96,23 @@ function startPreview(){
  else{setPlayIndex(0);setPhase(theme==='theater'?'intro':'photos');setPlaying(true);playMusic()}
  setSceneKey(k=>k+1)
 }
+async function makeMovie(){
+ if(!photos.length||exporting)return;
+ setPlaying(false);stopMusic();setExportError('');setExportProgress(0);setExporting(true);
+ try{
+  const {blob,extension}=await exportMovie({photos,durations:computed,title,theme,aspect,bgm,audioUrl:audioFile?.url,volume,onProgress:setExportProgress});
+  if(exportUrl.current)URL.revokeObjectURL(exportUrl.current);
+  const url=URL.createObjectURL(blob);exportUrl.current=url;
+  setExportResult({url,name:'omoide-theater.'+extension,blob});
+ }catch(e){setExportError(e instanceof Error?e.message:'動画を書き出せませんでした')}
+ finally{setExporting(false)}
+}
+async function shareMovie(){
+ if(!exportResult)return;
+ const file=new File([exportResult.blob],exportResult.name,{type:exportResult.blob.type});
+ try{if(navigator.canShare?.({files:[file]})&&navigator.share){await navigator.share({files:[file],title:'おもいでシアター'});return}}catch(e){if(e instanceof Error&&e.name==='AbortError')return}
+ const link=document.createElement('a');link.href=exportResult.url;link.download=exportResult.name;link.click();
+}
 function importMusic(files:FileList|null){
  const file=files?.[0];if(!file)return;
  if(!file.type.startsWith('audio/')&&!/\\.(mp3|m4a|wav|aac|ogg)$/i.test(file.name)){setMusicError('音声ファイルを選んでください');return}
@@ -102,7 +126,7 @@ useEffect(()=>{if(!playing)stopMusic()},[playing]);
 
 
 return <main><header><div className="brand">✦ おもいでシアター</div><div className="subtitle">写真が、一本の映画になる。</div></header>
-{step==='home'?<section className="panel hero"><div className="stage">🎬<h1>思い出を映画に</h1><p>写真を選ぶだけで、自分だけのムービーを。</p></div><button className="primary" onClick={()=>setStep('theme')}>＋ 新しいムービーを作る</button><p className="note">試作版です。BGMの試聴に対応しました。動画の書き出しは今後実装します。</p></section>:null}
+{step==='home'?<section className="panel hero"><div className="stage">🎬<h1>思い出を映画に</h1><p>写真を選ぶだけで、自分だけのムービーを。</p></div><button className="primary" onClick={()=>setStep('theme')}>＋ 新しいムービーを作る</button><p className="note">試作版です。BGMの試聴に対応しました。動画の書き出しは試験機能として追加しました。</p></section>:null}
 {step==='theme'?<section className="panel"><h2>① テーマを選ぶ</h2><div className="themeGrid">{themes.map(t=><button key={t.id} className={'theme '+(theme===t.id?'active':'')} onClick={()=>setTheme(t.id)}><span>{t.emoji}</span><strong>{t.name}</strong><small>{t.description}</small></button>)}</div><label>ムービーのタイトル<input value={title} onChange={e=>setTitle(e.target.value)} /></label><label>画面の向き<select value={aspect} onChange={e=>setAspect(e.target.value as typeof aspect)}><option value="wide">横型（16:9）</option><option value="vertical">縦型（9:16）</option></select></label><button className="primary" onClick={()=>setStep('photos')}>次へ：写真を選ぶ</button></section>:null}
 {step==='photos'?<section className="panel"><h2>② 写真を選ぶ</h2><p>iPhoneの写真からまとめて選べます。</p><button className="primary" onClick={()=>input.current?.click()}>写真を追加する</button><button className="secondary" onClick={()=>setStep('theme')}>戻る</button></section>:null}
 {step==='edit'?<section className="panel"><div className="sectionHeading"><h2>③ ムービー編集</h2><button className="small" onClick={()=>setStep('theme')}>テーマ変更</button></div><div className={'preview '+aspect}><div className={'previewFrame '+theme}>
@@ -110,7 +134,7 @@ return <main><header><div className="brand">✦ おもいでシアター</div><d
 {playing&&phase==='intro'&&theme==='theater'?<div key={'curtain-'+sceneKey} className="curtainOverlay"><div className="curtainPanel curtainLeft"/><div className="curtainPanel curtainRight"/><div className="curtainCaption">{title}</div></div>:null}
 {playing&&phase==='outro'?<div className="endingScreen"><div>Fin.</div><small>{title}</small></div>:null}
 {!playing||phase==='intro'?<div className="previewTitle">{title}</div>:null}
-</div></div><div className="actions"><button onClick={startPreview}>{playing?'■ 停止':'▶ 演出付きプレビュー'}</button><button onClick={()=>input.current?.click()}>＋ 写真追加</button></div><p className="note">カーテン・写真のフェード／ズーム／スライドを画面で確認できます。BGMは試聴用です。MP4書き出しはまだ未実装です。</p><h3>写真の並び順</h3><div className="strip">{photos.map((p,i)=><button key={p.id} className={'thumb '+(selected===i?'selected':'')} onClick={()=>{setSelected(i);setPlaying(false);setPhase('intro');setSceneKey(k=>k+1)}}><img src={p.url} alt={p.name}/><span>{i+1}</span></button>)}</div>{current&&<div className="editor"><h3>選択中の写真：{selected+1}枚目</h3><div className="actions"><button disabled={selected===0} onClick={()=>move(selected,-1)}>← 前へ</button><button disabled={selected===photos.length-1} onClick={()=>move(selected,1)}>後ろへ →</button><button className="danger" onClick={()=>remove(selected)}>削除</button></div><label>演出<select value={current.effect} onChange={e=>update(selected,{effect:e.target.value as Photo['effect']})}><option value="zoom">ゆっくりズーム</option><option value="fade">フェード</option><option value="slide">スライド</option></select></label>{mode==='photo'&&<label>表示時間：{current.duration}秒<input type="range" min="2" max="15" value={current.duration} onChange={e=>update(selected,{duration:Number(e.target.value)})}/></label>}</div>}<section className="musicBox"><h3>🎵 BGMを選ぶ</h3>
+</div></div><div className="actions"><button onClick={startPreview}>{playing?'■ 停止':'▶ 演出付きプレビュー'}</button><button onClick={()=>input.current?.click()}>＋ 写真追加</button></div><p className="note">カーテン・写真のフェード／ズーム／スライドを画面で確認できます。BGMは試聴用です。動画の書き出しは下の試験機能で確認できます。</p><h3>写真の並び順</h3><div className="strip">{photos.map((p,i)=><button key={p.id} className={'thumb '+(selected===i?'selected':'')} onClick={()=>{setSelected(i);setPlaying(false);setPhase('intro');setSceneKey(k=>k+1)}}><img src={p.url} alt={p.name}/><span>{i+1}</span></button>)}</div>{current&&<div className="editor"><h3>選択中の写真：{selected+1}枚目</h3><div className="actions"><button disabled={selected===0} onClick={()=>move(selected,-1)}>← 前へ</button><button disabled={selected===photos.length-1} onClick={()=>move(selected,1)}>後ろへ →</button><button className="danger" onClick={()=>remove(selected)}>削除</button></div><label>演出<select value={current.effect} onChange={e=>update(selected,{effect:e.target.value as Photo['effect']})}><option value="zoom">ゆっくりズーム</option><option value="fade">フェード</option><option value="slide">スライド</option></select></label>{mode==='photo'&&<label>表示時間：{current.duration}秒<input type="range" min="2" max="15" value={current.duration} onChange={e=>update(selected,{duration:Number(e.target.value)})}/></label>}</div>}<section className="musicBox"><h3>🎵 BGMを選ぶ</h3>
 <label>音楽の種類<select value={bgm} onChange={e=>{stopMusic();setBgm(e.target.value as typeof bgm)}}>
 <option value="gentle">やさしい音色（試作用オリジナル音）</option>
 <option value="bright">明るい音色（試作用オリジナル音）</option>
@@ -121,8 +145,14 @@ return <main><header><div className="brand">✦ おもいでシアター</div><d
 <label>BGM音量：{volume}%<input type="range" min="0" max="100" step="5" value={volume} onChange={e=>setVolume(Number(e.target.value))}/></label>
 {musicError?<p className="musicError" role="alert">{musicError}</p>:null}
 <p className="note">アプリ内の音は動作確認用の簡易音源です。正式なBGM曲は後から追加します。Apple Musicなど保護された配信曲は取り込めません。</p>
-</section><h3>ムービーの長さ</h3><div className="mode"><label><input type="radio" checked={mode==='photo'} onChange={()=>setMode('photo')}/> 写真の表示時間を基準</label><label><input type="radio" checked={mode==='music'} onChange={()=>setMode('music')}/> 音楽の長さを基準</label></div>{mode==='photo'?<label>新しく追加する写真の初期表示時間：{duration}秒<input type="range" min="2" max="15" value={duration} onChange={e=>setDuration(Number(e.target.value))}/><button className="small" onClick={()=>setPhotos(p=>p.map(x=>({...x,duration})))}>全写真に適用</button></label>:<label>音楽の使用時間（秒）<input type="number" min="15" max="3600" value={musicSeconds} onChange={e=>setMusicSeconds(Math.max(15,Number(e.target.value)||15))}/></label>}<div className="summary">完成予定時間：約 {Math.floor(total/60)}分{Math.round(total%60)}秒（前後の演出各6秒を含む）</div><label>タイトル<input value={title} onChange={e=>setTitle(e.target.value)}/></label><button className="secondary" onClick={()=>setStep('home')}>ホームに戻る</button></section>:null}
+</section><h3>ムービーの長さ</h3><div className="mode"><label><input type="radio" checked={mode==='photo'} onChange={()=>setMode('photo')}/> 写真の表示時間を基準</label><label><input type="radio" checked={mode==='music'} onChange={()=>setMode('music')}/> 音楽の長さを基準</label></div>{mode==='photo'?<label>新しく追加する写真の初期表示時間：{duration}秒<input type="range" min="2" max="15" value={duration} onChange={e=>setDuration(Number(e.target.value))}/><button className="small" onClick={()=>setPhotos(p=>p.map(x=>({...x,duration})))}>全写真に適用</button></label>:<label>音楽の使用時間（秒）<input type="number" min="15" max="3600" value={musicSeconds} onChange={e=>setMusicSeconds(Math.max(15,Number(e.target.value)||15))}/></label>}<div className="summary">完成予定時間：約 {Math.floor(total/60)}分{Math.round(total%60)}秒（前後の演出各6秒を含む）</div><label>タイトル<input value={title} onChange={e=>setTitle(e.target.value)}/></label><section className="exportBox"><h3>🎬 動画を書き出す（試験機能）</h3>
+<p className="note">iPhoneのブラウザによっては動画の記録に対応していません。対応している場合はBGMと演出を含めた動画を作成します。作成には動画の長さと同じ程度の時間がかかります。</p>
+<button className="primary" disabled={exporting||!photos.length} onClick={makeMovie}>{exporting?'動画を作成中… '+exportProgress+'%':'動画を作成する'}</button>
+{exporting?<progress max="100" value={exportProgress} style={{width:'100%'}}/>:null}
+{exportError?<p className="musicError" role="alert">{exportError}</p>:null}
+{exportResult?<div><p>動画ができました（{exportResult.name}）</p><video src={exportResult.url} controls playsInline style={{width:'100%',maxHeight:320,background:'#211629'}}/><div className="actions"><button onClick={shareMovie}>共有・保存する</button><a className="downloadLink" href={exportResult.url} download={exportResult.name}>ファイルをダウンロード</a></div><p className="note">共有メニューから「ビデオを保存」が選べる場合は写真アプリに保存できます。対応形式は端末によって異なります。</p></div>:null}
+</section><button className="secondary" onClick={()=>setStep('home')}>ホームに戻る</button></section>:null}
 <input ref={musicInput} type="file" accept="audio/*,.mp3,.m4a,.wav,.aac" hidden onChange={e=>{importMusic(e.target.files);e.target.value=''}}/>
 <input ref={input} type="file" accept="image/*" multiple hidden onChange={e=>{addPhotos(e.target.files);e.target.value=''}}/>
-<footer>おもいでシアター · 試作版 v0.3</footer></main>
+<footer>おもいでシアター · 試作版 v0.4</footer></main>
 }
