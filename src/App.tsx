@@ -9,6 +9,8 @@ export default function App(){
 const [photos,setPhotos]=useState<Photo[]>([]);
 const [theme,setTheme]=useState<Theme>('theater');
 const [title,setTitle]=useState('大切な思い出');
+const [ending,setEnding]=useState('ありがとう、たくさんの思い出');
+const [frame,setFrame]=useState<'none'|'sakura'|'gold'|'soft'>('none');
 const [step,setStep]=useState<'home'|'theme'|'photos'|'edit'>('home');
 const [selected,setSelected]=useState(0);
 const [mode,setMode]=useState<'photo'|'music'>('photo');
@@ -100,7 +102,7 @@ async function makeMovie(){
  if(!photos.length||exporting)return;
  setPlaying(false);stopMusic();setExportError('');setExportProgress(0);setExporting(true);
  try{
-  const {blob,extension}=await exportMovie({photos,durations:computed,title,theme,aspect,bgm,audioUrl:audioFile?.url,volume,onProgress:setExportProgress});
+  const {blob,extension}=await exportMovie({photos,durations:computed,title,ending,frame,theme,aspect,bgm,audioUrl:audioFile?.url,volume,onProgress:setExportProgress});
   if(exportUrl.current)URL.revokeObjectURL(exportUrl.current);
   const url=URL.createObjectURL(blob);exportUrl.current=url;
   setExportResult({url,name:'omoide-theater.'+extension,blob});
@@ -132,9 +134,15 @@ return <main><header><div className="brand">✦ おもいでシアター</div><d
 {step==='edit'?<section className="panel"><div className="sectionHeading"><h2>③ ムービー編集</h2><button className="small" onClick={()=>setStep('theme')}>テーマ変更</button></div><div className={'preview '+aspect}><div className={'previewFrame '+theme}>
 {activePhoto?<div key={sceneKey+'-'+(activePhoto?.id||'')} className={'scenePhoto '+(playing&&phase==='photos'?'animate '+activePhoto.effect:'')} style={{'--scene-duration':activeDuration+'s'} as CSSProperties}><img src={activePhoto.url} alt="選択中の写真" /></div>:<span>写真を追加してください</span>}
 {playing&&phase==='intro'&&theme==='theater'?<div key={'curtain-'+sceneKey} className="curtainOverlay"><div className="curtainPanel curtainLeft"/><div className="curtainPanel curtainRight"/><div className="curtainCaption">{title}</div></div>:null}
-{playing&&phase==='outro'?<div className="endingScreen"><div>Fin.</div><small>{title}</small></div>:null}
+{playing&&phase==='outro'?<div className="endingScreen"><div>Fin.</div><small>{ending||title}</small></div>:null}
+{frame!=='none'&&!(playing&&phase==='intro'&&theme==='theater')?<div className={'photoDecoration '+frame} aria-hidden="true">{frame==='sakura'?'🌸　🌸':frame==='gold'?'✦　✦':'♡　♡'}</div>:null}
 {!playing||phase==='intro'?<div className="previewTitle">{title}</div>:null}
-</div></div><div className="actions"><button onClick={startPreview}>{playing?'■ 停止':'▶ 演出付きプレビュー'}</button><button onClick={()=>input.current?.click()}>＋ 写真追加</button></div><p className="note">カーテン・写真のフェード／ズーム／スライドを画面で確認できます。BGMは試聴用です。動画の書き出しは下の試験機能で確認できます。</p><h3>写真の並び順</h3><div className="strip">{photos.map((p,i)=><button key={p.id} className={'thumb '+(selected===i?'selected':'')} onClick={()=>{setSelected(i);setPlaying(false);setPhase('intro');setSceneKey(k=>k+1)}}><img src={p.url} alt={p.name}/><span>{i+1}</span></button>)}</div>{current&&<div className="editor"><h3>選択中の写真：{selected+1}枚目</h3><div className="actions"><button disabled={selected===0} onClick={()=>move(selected,-1)}>← 前へ</button><button disabled={selected===photos.length-1} onClick={()=>move(selected,1)}>後ろへ →</button><button className="danger" onClick={()=>remove(selected)}>削除</button></div><label>演出<select value={current.effect} onChange={e=>update(selected,{effect:e.target.value as Photo['effect']})}><option value="zoom">ゆっくりズーム</option><option value="fade">フェード</option><option value="slide">スライド</option></select></label>{mode==='photo'&&<label>表示時間：{current.duration}秒<input type="range" min="2" max="15" value={current.duration} onChange={e=>update(selected,{duration:Number(e.target.value)})}/></label>}</div>}<section className="musicBox"><h3>🎵 BGMを選ぶ</h3>
+</div></div><div className="actions"><button onClick={startPreview}>{playing?'■ 停止':'▶ 演出付きプレビュー'}</button><button onClick={()=>input.current?.click()}>＋ 写真追加</button></div><p className="note">カーテン・写真のフェード／ズーム／スライドを画面で確認できます。BGMは試聴用です。動画の書き出しは下の試験機能で確認できます。</p><h3>写真の並び順</h3><div className="strip">{photos.map((p,i)=><button key={p.id} className={'thumb '+(selected===i?'selected':'')} onClick={()=>{setSelected(i);setPlaying(false);setPhase('intro');setSceneKey(k=>k+1)}}><img src={p.url} alt={p.name}/><span>{i+1}</span></button>)}</div>{current&&<div className="editor"><h3>選択中の写真：{selected+1}枚目</h3><div className="actions"><button disabled={selected===0} onClick={()=>move(selected,-1)}>← 前へ</button><button disabled={selected===photos.length-1} onClick={()=>move(selected,1)}>後ろへ →</button><button className="danger" onClick={()=>remove(selected)}>削除</button></div><label>演出<select value={current.effect} onChange={e=>update(selected,{effect:e.target.value as Photo['effect']})}><option value="zoom">ゆっくりズーム</option><option value="fade">フェード</option><option value="slide">スライド</option></select></label>{mode==='photo'&&<label>表示時間：{current.duration}秒<input type="range" min="2" max="15" value={current.duration} onChange={e=>update(selected,{duration:Number(e.target.value)})}/></label>}</div>}<section className="designBox"><h3>🌸 写真の飾り・エンディング</h3>
+<label>写真フレーム<select value={frame} onChange={e=>setFrame(e.target.value as typeof frame)}>
+<option value="none">フレームなし</option><option value="sakura">桜（卒園・卒業）</option><option value="gold">ゴールド（結婚式・お祝い）</option><option value="soft">やさしいハート（誕生日・家族）</option></select></label>
+<label>最後に表示するメッセージ<textarea rows={2} maxLength={70} value={ending} onChange={e=>setEnding(e.target.value)} placeholder="ありがとう、たくさんの思い出"/></label>
+<p className="note">フレームは全写真に適用され、メッセージは動画の最後に表示されます。</p>
+</section><section className="musicBox"><h3>🎵 BGMを選ぶ</h3>
 <label>音楽の種類<select value={bgm} onChange={e=>{stopMusic();setBgm(e.target.value as typeof bgm)}}>
 <option value="gentle">やさしい音色（試作用オリジナル音）</option>
 <option value="bright">明るい音色（試作用オリジナル音）</option>
@@ -154,5 +162,5 @@ return <main><header><div className="brand">✦ おもいでシアター</div><d
 </section><button className="secondary" onClick={()=>setStep('home')}>ホームに戻る</button></section>:null}
 <input ref={musicInput} type="file" accept="audio/*,.mp3,.m4a,.wav,.aac" hidden onChange={e=>{importMusic(e.target.files);e.target.value=''}}/>
 <input ref={input} type="file" accept="image/*" multiple hidden onChange={e=>{addPhotos(e.target.files);e.target.value=''}}/>
-<footer>おもいでシアター · 試作版 v0.4</footer></main>
+<footer>おもいでシアター · 試作版 v0.5</footer></main>
 }
