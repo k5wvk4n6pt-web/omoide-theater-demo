@@ -10,7 +10,23 @@ export async function deleteDraft(){await transaction('readwrite',store=>store.d
 
 export async function listProjects():Promise<ProjectSummary[]>{
  const db=await openDb();
- return new Promise((resolve,reject)=>{const tx=db.transaction(STORE,'readonly');const request=tx.objectStore(STORE).getAllKeys();request.onsuccess=async()=>{try{const keys=request.result as string[];const projects=await Promise.all(keys.map(async key=>{const p=await transaction<StoredProject|undefined>('readonly',store=>store.get(key));return p?{id:key,title:String(p.settings.title||'無題の作品'),savedAt:p.savedAt,photoCount:p.photos.length,thumbnail:p.photos[0]?.blob}:null}));resolve(projects.filter((p):p is ProjectSummary=>p!==null).sort((a,b)=>b.savedAt.localeCompare(a.savedAt)))}catch(e){reject(e)}finally{db.close()}};request.onerror=()=>{db.close();reject(request.error)}})
+ const keys=await new Promise<IDBValidKey[]>((resolve,reject)=>{
+  const tx=db.transaction(STORE,'readonly');
+  const req=tx.objectStore(STORE).getAllKeys();
+  req.onsuccess=()=>resolve(req.result);
+  req.onerror=()=>reject(req.error);
+ });
+ db.close();
+ const results=await Promise.all(keys.map(async key=>{
+  const p=await transaction<StoredProject|undefined>('readonly',store=>store.get(key));
+  if(!p)return null;
+  const item:ProjectSummary={id:String(key),title:String(p.settings.title||'無題の作品'),savedAt:p.savedAt,photoCount:p.photos.length};
+  if(p.photos[0]?.blob)item.thumbnail=p.photos[0].blob;
+  return item;
+ }));
+ const projects:ProjectSummary[]=[];
+ for(const item of results){if(item!==null)projects.push(item)}
+ return projects.sort((a,b)=>b.savedAt.localeCompare(a.savedAt));
 }
 export async function saveProject(id:string,project:StoredProject){await transaction('readwrite',store=>store.put(project,id))}
 export async function loadProject(id:string){return transaction<StoredProject|undefined>('readonly',store=>store.get(id))}
