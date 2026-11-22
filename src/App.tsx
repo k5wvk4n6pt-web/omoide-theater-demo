@@ -19,9 +19,20 @@ const [playIndex,setPlayIndex]=useState(0);
 const [phase,setPhase]=useState<'intro'|'photos'|'outro'>('intro');
 const [sceneKey,setSceneKey]=useState(0);
 const input=useRef<HTMLInputElement>(null);
+const musicInput=useRef<HTMLInputElement>(null);
+const audioRef=useRef<HTMLAudioElement|null>(null);
+const soundCtx=useRef<AudioContext|null>(null);
+const synthTimer=useRef<number|null>(null);
+const [bgm,setBgm]=useState<'none'|'gentle'|'bright'|'file'>('gentle');
+const [audioFile,setAudioFile]=useState<{name:string;url:string;seconds:number}|null>(null);
+const [volume,setVolume]=useState(65);
+const [musicError,setMusicError]=useState('');
+const [musicPlaying,setMusicPlaying]=useState(false);
 const photosRef=useRef<Photo[]>([]);
 useEffect(()=>{photosRef.current=photos},[photos]);
 useEffect(()=>()=>{photosRef.current.forEach(p=>URL.revokeObjectURL(p.url))},[]);
+useEffect(()=>()=>{if(audioFile)URL.revokeObjectURL(audioFile.url)},[audioFile]);
+useEffect(()=>{if(audioRef.current)audioRef.current.volume=volume/100},[volume]);
 const intro=6,outro=6;
 const computed=useMemo(()=>mode==='photo'?photos.map(p=>p.duration):photos.map(()=>Math.max(1,(musicSeconds-intro-outro)/Math.max(1,photos.length))),[photos,mode,musicSeconds]);
 const total=intro+outro+computed.reduce((a,b)=>a+b,0);
@@ -44,10 +55,54 @@ function update(i:number,patch:Partial<Photo>){setPhotos(p=>p.map((v,j)=>j===i?{
 const current=photos[selected];
 const activePhoto=photos[playing?playIndex:selected];
 const activeDuration=computed[playing?playIndex:selected]||duration;
-function startPreview(){if(!photos.length)return;if(playing){setPlaying(false);setPhase('intro')}else{setPlayIndex(0);setPhase(theme==='theater'?'intro':'photos');setPlaying(true)}setSceneKey(k=>k+1)}
+function stopMusic(){
+ if(audioRef.current){audioRef.current.pause();audioRef.current.currentTime=0;audioRef.current=null}
+ if(synthTimer.current!==null){window.clearInterval(synthTimer.current);synthTimer.current=null}
+ if(soundCtx.current){void soundCtx.current.close();soundCtx.current=null}
+ setMusicPlaying(false);
+}
+function playMusic(){
+ stopMusic();setMusicError('');
+ if(bgm==='none')return;
+ if(bgm==='file'){
+  if(!audioFile){setMusicError('先に音楽ファイルを選んでください');return}
+  const audio=new Audio(audioFile.url);audio.loop=true;audio.volume=volume/100;audioRef.current=audio;
+  void audio.play().then(()=>setMusicPlaying(true)).catch(()=>{setMusicError('この音声は再生できません。別のファイルをお試しください');setMusicPlaying(false)});
+  return;
+ }
+ try{
+  const ctx=new AudioContext();soundCtx.current=ctx;void ctx.resume();
+  const gentle=[261.63,329.63,392,523.25,392,329.63,293.66,349.23];
+  const bright=[392,493.88,587.33,783.99,659.25,587.33,493.88,523.25];
+  const notes=bgm==='gentle'?gentle:bright;
+  let index=0;
+  const note=()=>{if(ctx.state==='closed')return;const osc=ctx.createOscillator(),gain=ctx.createGain();
+   osc.type=bgm==='gentle'?'sine':'triangle';osc.frequency.value=notes[index++%notes.length];
+   const t=ctx.currentTime;gain.gain.setValueAtTime(0.0001,t);gain.gain.exponentialRampToValueAtTime(Math.max(.0001,volume/100*.09),t+.12);gain.gain.exponentialRampToValueAtTime(.0001,t+1.1);
+   osc.connect(gain);gain.connect(ctx.destination);osc.start(t);osc.stop(t+1.12);
+  };note();synthTimer.current=window.setInterval(note,bgm==='gentle'?1300:850);setMusicPlaying(true);
+ }catch{setMusicError('この端末ではBGMを再生できません')}
+}
+function startPreview(){
+ if(!photos.length)return;
+ if(playing){setPlaying(false);setPhase('intro');stopMusic()}
+ else{setPlayIndex(0);setPhase(theme==='theater'?'intro':'photos');setPlaying(true);playMusic()}
+ setSceneKey(k=>k+1)
+}
+function importMusic(files:FileList|null){
+ const file=files?.[0];if(!file)return;
+ if(!file.type.startsWith('audio/')&&!/\\.(mp3|m4a|wav|aac|ogg)$/i.test(file.name)){setMusicError('音声ファイルを選んでください');return}
+ stopMusic();setMusicError('');
+ const url=URL.createObjectURL(file);
+ const probe=new Audio();probe.preload='metadata';probe.src=url;
+ probe.onloadedmetadata=()=>{const seconds=Number.isFinite(probe.duration)?Math.round(probe.duration):0;setAudioFile({name:file.name,url,seconds});setBgm('file');if(seconds>12)setMusicSeconds(seconds)};
+ probe.onerror=()=>{URL.revokeObjectURL(url);setMusicError('音楽ファイルを読み取れませんでした')};
+}
+useEffect(()=>{if(!playing)stopMusic()},[playing]);
+
 
 return <main><header><div className="brand">✦ おもいでシアター</div><div className="subtitle">写真が、一本の映画になる。</div></header>
-{step==='home'?<section className="panel hero"><div className="stage">🎬<h1>思い出を映画に</h1><p>写真を選ぶだけで、自分だけのムービーを。</p></div><button className="primary" onClick={()=>setStep('theme')}>＋ 新しいムービーを作る</button><p className="note">最初の試作版です。動画の書き出し・BGM再生は今後実装します。</p></section>:null}
+{step==='home'?<section className="panel hero"><div className="stage">🎬<h1>思い出を映画に</h1><p>写真を選ぶだけで、自分だけのムービーを。</p></div><button className="primary" onClick={()=>setStep('theme')}>＋ 新しいムービーを作る</button><p className="note">試作版です。BGMの試聴に対応しました。動画の書き出しは今後実装します。</p></section>:null}
 {step==='theme'?<section className="panel"><h2>① テーマを選ぶ</h2><div className="themeGrid">{themes.map(t=><button key={t.id} className={'theme '+(theme===t.id?'active':'')} onClick={()=>setTheme(t.id)}><span>{t.emoji}</span><strong>{t.name}</strong><small>{t.description}</small></button>)}</div><label>ムービーのタイトル<input value={title} onChange={e=>setTitle(e.target.value)} /></label><label>画面の向き<select value={aspect} onChange={e=>setAspect(e.target.value as typeof aspect)}><option value="wide">横型（16:9）</option><option value="vertical">縦型（9:16）</option></select></label><button className="primary" onClick={()=>setStep('photos')}>次へ：写真を選ぶ</button></section>:null}
 {step==='photos'?<section className="panel"><h2>② 写真を選ぶ</h2><p>iPhoneの写真からまとめて選べます。</p><button className="primary" onClick={()=>input.current?.click()}>写真を追加する</button><button className="secondary" onClick={()=>setStep('theme')}>戻る</button></section>:null}
 {step==='edit'?<section className="panel"><div className="sectionHeading"><h2>③ ムービー編集</h2><button className="small" onClick={()=>setStep('theme')}>テーマ変更</button></div><div className={'preview '+aspect}><div className={'previewFrame '+theme}>
@@ -55,7 +110,19 @@ return <main><header><div className="brand">✦ おもいでシアター</div><d
 {playing&&phase==='intro'&&theme==='theater'?<div key={'curtain-'+sceneKey} className="curtainOverlay"><div className="curtainPanel curtainLeft"/><div className="curtainPanel curtainRight"/><div className="curtainCaption">{title}</div></div>:null}
 {playing&&phase==='outro'?<div className="endingScreen"><div>Fin.</div><small>{title}</small></div>:null}
 {!playing||phase==='intro'?<div className="previewTitle">{title}</div>:null}
-</div></div><div className="actions"><button onClick={startPreview}>{playing?'■ 停止':'▶ 演出付きプレビュー'}</button><button onClick={()=>input.current?.click()}>＋ 写真追加</button></div><p className="note">カーテン・写真のフェード／ズーム／スライドを画面で確認できます。音声とMP4書き出しはまだ未実装です。</p><h3>写真の並び順</h3><div className="strip">{photos.map((p,i)=><button key={p.id} className={'thumb '+(selected===i?'selected':'')} onClick={()=>{setSelected(i);setPlaying(false);setPhase('intro');setSceneKey(k=>k+1)}}><img src={p.url} alt={p.name}/><span>{i+1}</span></button>)}</div>{current&&<div className="editor"><h3>選択中の写真：{selected+1}枚目</h3><div className="actions"><button disabled={selected===0} onClick={()=>move(selected,-1)}>← 前へ</button><button disabled={selected===photos.length-1} onClick={()=>move(selected,1)}>後ろへ →</button><button className="danger" onClick={()=>remove(selected)}>削除</button></div><label>演出<select value={current.effect} onChange={e=>update(selected,{effect:e.target.value as Photo['effect']})}><option value="zoom">ゆっくりズーム</option><option value="fade">フェード</option><option value="slide">スライド</option></select></label>{mode==='photo'&&<label>表示時間：{current.duration}秒<input type="range" min="2" max="15" value={current.duration} onChange={e=>update(selected,{duration:Number(e.target.value)})}/></label>}</div>}<h3>ムービーの長さ</h3><div className="mode"><label><input type="radio" checked={mode==='photo'} onChange={()=>setMode('photo')}/> 写真の表示時間を基準</label><label><input type="radio" checked={mode==='music'} onChange={()=>setMode('music')}/> 音楽の長さを基準</label></div>{mode==='photo'?<label>新しく追加する写真の初期表示時間：{duration}秒<input type="range" min="2" max="15" value={duration} onChange={e=>setDuration(Number(e.target.value))}/><button className="small" onClick={()=>setPhotos(p=>p.map(x=>({...x,duration})))}>全写真に適用</button></label>:<label>音楽の使用時間（秒）<input type="number" min="15" max="3600" value={musicSeconds} onChange={e=>setMusicSeconds(Math.max(15,Number(e.target.value)||15))}/></label>}<div className="summary">完成予定時間：約 {Math.floor(total/60)}分{Math.round(total%60)}秒（前後の演出各6秒を含む）</div><label>タイトル<input value={title} onChange={e=>setTitle(e.target.value)}/></label><button className="secondary" onClick={()=>setStep('home')}>ホームに戻る</button></section>:null}
+</div></div><div className="actions"><button onClick={startPreview}>{playing?'■ 停止':'▶ 演出付きプレビュー'}</button><button onClick={()=>input.current?.click()}>＋ 写真追加</button></div><p className="note">カーテン・写真のフェード／ズーム／スライドを画面で確認できます。BGMは試聴用です。MP4書き出しはまだ未実装です。</p><h3>写真の並び順</h3><div className="strip">{photos.map((p,i)=><button key={p.id} className={'thumb '+(selected===i?'selected':'')} onClick={()=>{setSelected(i);setPlaying(false);setPhase('intro');setSceneKey(k=>k+1)}}><img src={p.url} alt={p.name}/><span>{i+1}</span></button>)}</div>{current&&<div className="editor"><h3>選択中の写真：{selected+1}枚目</h3><div className="actions"><button disabled={selected===0} onClick={()=>move(selected,-1)}>← 前へ</button><button disabled={selected===photos.length-1} onClick={()=>move(selected,1)}>後ろへ →</button><button className="danger" onClick={()=>remove(selected)}>削除</button></div><label>演出<select value={current.effect} onChange={e=>update(selected,{effect:e.target.value as Photo['effect']})}><option value="zoom">ゆっくりズーム</option><option value="fade">フェード</option><option value="slide">スライド</option></select></label>{mode==='photo'&&<label>表示時間：{current.duration}秒<input type="range" min="2" max="15" value={current.duration} onChange={e=>update(selected,{duration:Number(e.target.value)})}/></label>}</div>}<section className="musicBox"><h3>🎵 BGMを選ぶ</h3>
+<label>音楽の種類<select value={bgm} onChange={e=>{stopMusic();setBgm(e.target.value as typeof bgm)}}>
+<option value="gentle">やさしい音色（試作用オリジナル音）</option>
+<option value="bright">明るい音色（試作用オリジナル音）</option>
+<option value="file">自分の音楽ファイル</option>
+<option value="none">音楽なし</option></select></label>
+<div className="actions"><button onClick={()=>musicInput.current?.click()}>＋ 音楽ファイルを選ぶ</button><button disabled={bgm==='none'||(bgm==='file'&&!audioFile)} onClick={()=>musicPlaying?stopMusic():playMusic()}>{musicPlaying?'■ BGM停止':'♪ BGMを試聴'}</button></div>
+{audioFile?<p className="note">読み込み済み：{audioFile.name}（{audioFile.seconds||'不明'}秒）</p>:null}
+<label>BGM音量：{volume}%<input type="range" min="0" max="100" step="5" value={volume} onChange={e=>setVolume(Number(e.target.value))}/></label>
+{musicError?<p className="musicError" role="alert">{musicError}</p>:null}
+<p className="note">アプリ内の音は動作確認用の簡易音源です。正式なBGM曲は後から追加します。Apple Musicなど保護された配信曲は取り込めません。</p>
+</section><h3>ムービーの長さ</h3><div className="mode"><label><input type="radio" checked={mode==='photo'} onChange={()=>setMode('photo')}/> 写真の表示時間を基準</label><label><input type="radio" checked={mode==='music'} onChange={()=>setMode('music')}/> 音楽の長さを基準</label></div>{mode==='photo'?<label>新しく追加する写真の初期表示時間：{duration}秒<input type="range" min="2" max="15" value={duration} onChange={e=>setDuration(Number(e.target.value))}/><button className="small" onClick={()=>setPhotos(p=>p.map(x=>({...x,duration})))}>全写真に適用</button></label>:<label>音楽の使用時間（秒）<input type="number" min="15" max="3600" value={musicSeconds} onChange={e=>setMusicSeconds(Math.max(15,Number(e.target.value)||15))}/></label>}<div className="summary">完成予定時間：約 {Math.floor(total/60)}分{Math.round(total%60)}秒（前後の演出各6秒を含む）</div><label>タイトル<input value={title} onChange={e=>setTitle(e.target.value)}/></label><button className="secondary" onClick={()=>setStep('home')}>ホームに戻る</button></section>:null}
+<input ref={musicInput} type="file" accept="audio/*,.mp3,.m4a,.wav,.aac" hidden onChange={e=>{importMusic(e.target.files);e.target.value=''}}/>
 <input ref={input} type="file" accept="image/*" multiple hidden onChange={e=>{addPhotos(e.target.files);e.target.value=''}}/>
-<footer>おもいでシアター · 試作版 v0.2</footer></main>
+<footer>おもいでシアター · 試作版 v0.3</footer></main>
 }
