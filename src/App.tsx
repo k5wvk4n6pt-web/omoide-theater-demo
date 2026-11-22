@@ -1,12 +1,16 @@
 import {useEffect,useMemo,useRef,useState} from 'react';
 import type {CSSProperties} from 'react';
 import {exportMovie} from './exportMovie';
+import {saveDraft,loadDraft,deleteDraft} from './draftStore';
 type Photo={id:string;name:string;url:string;duration:number;effect:'fade'|'zoom'|'slide'|'page'|'heart'|'curtain';frame?:string;decoration?:string;sticker?:string;caption?:string;zoom?:number;offsetX?:number;offsetY?:number;captionX?:number;captionY?:number};
 type Theme='theater'|'album'|'sakura'|'sparkle';
 const themes:{id:Theme;name:string;emoji:string;description:string}[]=[{id:'theater',name:'シアター',emoji:'🎭',description:'赤いカーテン'},{id:'album',name:'アルバム',emoji:'📖',description:'懐かしい思い出'},{id:'sakura',name:'さくら',emoji:'🌸',description:'卒園・卒業'},{id:'sparkle',name:'キラキラ',emoji:'✨',description:'誕生日・お祝い'}];
 const id=()=>Math.random().toString(36).slice(2);
 export default function App(){
 const [photos,setPhotos]=useState<Photo[]>([]);
+const [draftInfo,setDraftInfo]=useState('');
+const [draftBusy,setDraftBusy]=useState(false);
+const [hasDraft,setHasDraft]=useState(false);
 const [theme,setTheme]=useState<Theme>('theater');
 const [title,setTitle]=useState('大切な思い出');
 const [ending,setEnding]=useState('ありがとう、たくさんの思い出');
@@ -65,6 +69,7 @@ const [exportError,setExportError]=useState('');
 const [exportResult,setExportResult]=useState<{url:string;name:string;blob:Blob}|null>(null);
 const exportUrl=useRef<string|null>(null);
 useEffect(()=>()=>{if(exportUrl.current)URL.revokeObjectURL(exportUrl.current)},[]);
+useEffect(()=>{void loadDraft().then(d=>{if(d){setHasDraft(true);setDraftInfo('保存済み：'+new Date(d.savedAt).toLocaleString('ja-JP'))}}).catch(()=>{})},[]);
 const photosRef=useRef<Photo[]>([]);
 useEffect(()=>{photosRef.current=photos},[photos]);
 useEffect(()=>()=>{photosRef.current.forEach(p=>URL.revokeObjectURL(p.url))},[]);
@@ -136,6 +141,34 @@ function startPreview(){
  else{setPlayIndex(0);setPhase(theme==='theater'?'intro':'photos');setPlaying(true);playMusic()}
  setSceneKey(k=>k+1)
 }
+async function saveProject(){
+ if(!photos.length||draftBusy)return;setDraftBusy(true);setDraftInfo('保存中…');
+ try{
+  const items=await Promise.all(photos.map(async p=>({meta:{...p,url:undefined},blob:await fetch(p.url).then(r=>r.blob())})));
+  const audio=audioFile?{name:audioFile.name,seconds:audioFile.seconds,blob:await fetch(audioFile.url).then(r=>r.blob())}:undefined;
+  const savedAt=new Date().toISOString();
+  await saveDraft({version:1,savedAt,photos:items,audio,settings:{theme,title,ending,frame,background,decoration,sticker,curtainColor,template,mode,musicSeconds,duration,aspect,bgm,volume}});
+  setHasDraft(true);setDraftInfo('保存しました：'+new Date(savedAt).toLocaleString('ja-JP'));
+ }catch(e){setDraftInfo('保存できませんでした。端末の空き容量やプライベートブラウズ設定をご確認ください。'+(e instanceof Error?' '+e.message:''))}
+ finally{setDraftBusy(false)}
+}
+async function restoreProject(){
+ if(draftBusy)return;setDraftBusy(true);setDraftInfo('読み込み中…');
+ try{
+  const draft=await loadDraft();if(!draft){setDraftInfo('保存された作品がありません');return}
+  const next=draft.photos.map(p=>({...p.meta,url:URL.createObjectURL(p.blob)} as Photo));
+  photosRef.current.forEach(p=>URL.revokeObjectURL(p.url));setPhotos(next);setSelected(0);setUndoStack([]);setRedoStack([]);setPlaying(false);
+  const v=draft.settings;
+  setTheme(v.theme as Theme);setTitle(v.title as string);setEnding(v.ending as string);setFrame(v.frame as typeof frame);setBackground(v.background as typeof background);setDecoration(v.decoration as typeof decoration);setSticker(v.sticker as string);setCurtainColor(v.curtainColor as typeof curtainColor);setTemplate(v.template as string);setMode(v.mode as typeof mode);setMusicSeconds(v.musicSeconds as number);setDuration(v.duration as number);setAspect(v.aspect as typeof aspect);setBgm(v.bgm as typeof bgm);setVolume(v.volume as number);
+  if(draft.audio){setAudioFile({name:draft.audio.name,seconds:draft.audio.seconds,url:URL.createObjectURL(draft.audio.blob)})}else setAudioFile(null);
+  setStep('edit');setDraftInfo('保存した作品を開きました');
+ }catch(e){setDraftInfo('読み込めませんでした。'+(e instanceof Error?' '+e.message:''))}
+ finally{setDraftBusy(false)}
+}
+async function eraseProject(){
+ if(!window.confirm('保存した途中作品を削除しますか？現在編集中の写真は消えません。'))return;
+ try{await deleteDraft();setHasDraft(false);setDraftInfo('保存した途中作品を削除しました')}catch{setDraftInfo('削除できませんでした')}
+}
 async function makeMovie(){
  if(!photos.length||exporting)return;
  setPlaying(false);stopMusic();setExportError('');setExportProgress(0);setExporting(true);
@@ -166,10 +199,10 @@ useEffect(()=>{if(!playing)stopMusic()},[playing]);
 
 
 return <main><header><div className="brand">✦ おもいでシアター</div><div className="subtitle">写真が、一本の映画になる。</div></header>
-{step==='home'?<section className="panel hero"><div className="stage">🎬<h1>思い出を映画に</h1><p>写真を選ぶだけで、自分だけのムービーを。</p></div><button className="primary" onClick={()=>setStep('theme')}>＋ 新しいムービーを作る</button><p className="note">試作版です。BGMの試聴に対応しました。動画の書き出しは試験機能として追加しました。</p></section>:null}
+{step==='home'?<section className="panel hero"><div className="stage">🎬<h1>思い出を映画に</h1><p>写真を選ぶだけで、自分だけのムービーを。</p></div><button className="primary" onClick={()=>setStep('theme')}>＋ 新しいムービーを作る</button>{hasDraft?<div className="draftBox"><h3>📁 保存した途中作品</h3><button onClick={restoreProject} disabled={draftBusy}>続きを編集する</button><button className="small" onClick={eraseProject} disabled={draftBusy}>保存データを削除</button></div>:null}{draftInfo?<p className="note" role="status">{draftInfo}</p>:null}<p className="note">試作版です。BGMの試聴に対応しました。動画の書き出しは試験機能として追加しました。</p></section>:null}
 {step==='theme'?<section className="panel"><h2>① テーマを選ぶ</h2><div className="themeGrid">{themes.map(t=><button key={t.id} className={'theme '+(theme===t.id?'active':'')} onClick={()=>setTheme(t.id)}><span>{t.emoji}</span><strong>{t.name}</strong><small>{t.description}</small></button>)}</div><label>ムービーのタイトル<input value={title} onChange={e=>setTitle(e.target.value)} /></label><label>画面の向き<select value={aspect} onChange={e=>setAspect(e.target.value as typeof aspect)}><option value="wide">横型（16:9）</option><option value="vertical">縦型（9:16）</option></select></label><button className="primary" onClick={()=>setStep('photos')}>次へ：写真を選ぶ</button></section>:null}
 {step==='photos'?<section className="panel"><h2>② 写真を選ぶ</h2><p>iPhoneの写真からまとめて選べます。</p><button className="primary" onClick={()=>input.current?.click()}>写真を追加する</button><button className="secondary" onClick={()=>setStep('theme')}>戻る</button></section>:null}
-{step==='edit'?<section className="panel"><div className="sectionHeading"><h2>③ ムービー編集</h2><button className="small" onClick={()=>setStep('theme')}>テーマ変更</button></div><div className={'preview '+aspect}><div className={'previewFrame '+theme+' backdrop-'+background}>
+{step==='edit'?<section className="panel"><div className="draftBox"><h3>💾 途中保存</h3><p className="note">写真・編集設定・読み込んだ音楽をこのiPhoneのブラウザ内に保存します（1作品）。</p><div className="actions"><button onClick={saveProject} disabled={draftBusy}>{draftBusy?'処理中…':'途中保存する'}</button>{hasDraft?<button onClick={restoreProject} disabled={draftBusy}>保存した作品を開く</button>:null}</div>{draftInfo?<p className="note" role="status">{draftInfo}</p>:null}</div><div className="sectionHeading"><h2>③ ムービー編集</h2><button className="small" onClick={()=>setStep('theme')}>テーマ変更</button></div><div className={'preview '+aspect}><div className={'previewFrame '+theme+' backdrop-'+background}>
 {activePhoto?<div key={sceneKey+'-'+(activePhoto?.id||'')} onPointerDown={e=>{if(editTool==='position')beginDrag(e,'photo')}} onPointerMove={moveDrag} onPointerUp={endDrag} onPointerCancel={endDrag} className={'scenePhoto '+(playing&&phase==='photos'?'animate '+activePhoto.effect:'')+(editTool==='position'?' draggablePhoto':'')} style={{'--scene-duration':activeDuration+'s'} as CSSProperties}><img src={activePhoto.url} alt="選択中の写真" style={{transform:'scale('+(activePhoto.zoom??1)+') translate('+(activePhoto.offsetX??0)+'%,'+(activePhoto.offsetY??0)+'%)'}} /></div>:<span>写真を追加してください</span>}
 {playing&&phase==='intro'&&theme==='theater'?<div key={'curtain-'+sceneKey} className={'curtainOverlay curtain-'+curtainColor}><div className="curtainPanel curtainLeft"/><div className="curtainPanel curtainRight"/><div className="curtainCaption">{title}</div></div>:null}
 {playing&&phase==='outro'?<div className="endingScreen"><div>Fin.</div><small>{ending||title}</small></div>:null}
@@ -221,5 +254,5 @@ return <main><header><div className="brand">✦ おもいでシアター</div><d
 </section><button className="secondary" onClick={()=>setStep('home')}>ホームに戻る</button></section>:null}
 <input ref={musicInput} type="file" accept="audio/*,.mp3,.m4a,.wav,.aac" hidden onChange={e=>{importMusic(e.target.files);e.target.value=''}}/>
 <input ref={input} type="file" accept="image/*" multiple hidden onChange={e=>{addPhotos(e.target.files);e.target.value=''}}/>
-<footer>おもいでシアター · 試作版 v0.8</footer></main>
+<footer>おもいでシアター · 試作版 v0.9</footer></main>
 }
