@@ -10,7 +10,12 @@ const [photos,setPhotos]=useState<Photo[]>([]);
 const [theme,setTheme]=useState<Theme>('theater');
 const [title,setTitle]=useState('大切な思い出');
 const [ending,setEnding]=useState('ありがとう、たくさんの思い出');
-const [frame,setFrame]=useState<'none'|'sakura'|'gold'|'soft'>('none');
+const [frame,setFrame]=useState<'none'|'sakura'|'gold'|'soft'|'green'|'film'|'balloon'|'snow'|'sunflower'|'polaroid'|'album'>('none');
+const [background,setBackground]=useState<'default'|'sky'|'sakura'|'stars'|'sunset'|'sparkle'|'rainbow'>('default');
+const [decoration,setDecoration]=useState<'none'|'petals'|'glitter'|'bubbles'|'hearts'|'fireworks'|'snow'|'confetti'|'light'>('none');
+const [sticker,setSticker]=useState('none');
+const [curtainColor,setCurtainColor]=useState<'red'|'pink'|'navy'|'gold'>('red');
+const [template,setTemplate]=useState('custom');
 const [step,setStep]=useState<'home'|'theme'|'photos'|'edit'>('home');
 const [selected,setSelected]=useState(0);
 const [mode,setMode]=useState<'photo'|'music'>('photo');
@@ -64,6 +69,9 @@ function update(i:number,patch:Partial<Photo>){setPhotos(p=>p.map((v,j)=>j===i?{
 const current=photos[selected];
 const activePhoto=photos[playing?playIndex:selected];
 const activeDuration=computed[playing?playIndex:selected]||duration;
+function applyTemplate(t:string){setTemplate(t);const presets:Record<string,{theme:Theme;frame:typeof frame;background:typeof background;decoration:typeof decoration;title:string;ending:string}>={graduation:{theme:'sakura',frame:'sakura',background:'sakura',decoration:'petals',title:'卒園おめでとう',ending:'たくさんの思い出をありがとう'},wedding:{theme:'sparkle',frame:'gold',background:'sparkle',decoration:'glitter',title:'Wedding Story',ending:'いつまでもお幸せに'},birthday:{theme:'sparkle',frame:'balloon',background:'rainbow',decoration:'confetti',title:'Happy Birthday',ending:'笑顔あふれる一年に'},travel:{theme:'album',frame:'polaroid',background:'sky',decoration:'bubbles',title:'旅の思い出',ending:'また一緒に旅しよう'},growth:{theme:'album',frame:'soft',background:'rainbow',decoration:'hearts',title:'成長の記録',ending:'これからも元気に大きくなってね'},theater:{theme:'theater',frame:'film',background:'stars',decoration:'light',title:'大切な思い出',ending:'Fin.'}};const p=presets[t];if(p){setTheme(p.theme);setFrame(p.frame);setBackground(p.background);setDecoration(p.decoration);setTitle(p.title);setEnding(p.ending)}}
+const symbols:Record<string,string>={bear:'🧸',rabbit:'🐰',camera:'📷',clapper:'🎬',bouquet:'💐',crown:'👑',graduation:'🎓',diploma:'📜',cake:'🎂',gift:'🎁',balloons:'🎈',rainbow:'🌈',star:'⭐',heart:'💗',music:'🎵',treble:'🎼',sparkles:'✨'};
+
 function stopMusic(){
  if(audioRef.current){audioRef.current.pause();audioRef.current.currentTime=0;audioRef.current=null}
  if(synthTimer.current!==null){window.clearInterval(synthTimer.current);synthTimer.current=null}
@@ -102,7 +110,7 @@ async function makeMovie(){
  if(!photos.length||exporting)return;
  setPlaying(false);stopMusic();setExportError('');setExportProgress(0);setExporting(true);
  try{
-  const {blob,extension}=await exportMovie({photos,durations:computed,title,ending,frame,theme,aspect,bgm,audioUrl:audioFile?.url,volume,onProgress:setExportProgress});
+  const {blob,extension}=await exportMovie({photos,durations:computed,title,ending,frame,background,decoration,sticker,curtainColor,theme,aspect,bgm,audioUrl:audioFile?.url,volume,onProgress:setExportProgress});
   if(exportUrl.current)URL.revokeObjectURL(exportUrl.current);
   const url=URL.createObjectURL(blob);exportUrl.current=url;
   setExportResult({url,name:'omoide-theater.'+extension,blob});
@@ -131,17 +139,25 @@ return <main><header><div className="brand">✦ おもいでシアター</div><d
 {step==='home'?<section className="panel hero"><div className="stage">🎬<h1>思い出を映画に</h1><p>写真を選ぶだけで、自分だけのムービーを。</p></div><button className="primary" onClick={()=>setStep('theme')}>＋ 新しいムービーを作る</button><p className="note">試作版です。BGMの試聴に対応しました。動画の書き出しは試験機能として追加しました。</p></section>:null}
 {step==='theme'?<section className="panel"><h2>① テーマを選ぶ</h2><div className="themeGrid">{themes.map(t=><button key={t.id} className={'theme '+(theme===t.id?'active':'')} onClick={()=>setTheme(t.id)}><span>{t.emoji}</span><strong>{t.name}</strong><small>{t.description}</small></button>)}</div><label>ムービーのタイトル<input value={title} onChange={e=>setTitle(e.target.value)} /></label><label>画面の向き<select value={aspect} onChange={e=>setAspect(e.target.value as typeof aspect)}><option value="wide">横型（16:9）</option><option value="vertical">縦型（9:16）</option></select></label><button className="primary" onClick={()=>setStep('photos')}>次へ：写真を選ぶ</button></section>:null}
 {step==='photos'?<section className="panel"><h2>② 写真を選ぶ</h2><p>iPhoneの写真からまとめて選べます。</p><button className="primary" onClick={()=>input.current?.click()}>写真を追加する</button><button className="secondary" onClick={()=>setStep('theme')}>戻る</button></section>:null}
-{step==='edit'?<section className="panel"><div className="sectionHeading"><h2>③ ムービー編集</h2><button className="small" onClick={()=>setStep('theme')}>テーマ変更</button></div><div className={'preview '+aspect}><div className={'previewFrame '+theme}>
+{step==='edit'?<section className="panel"><div className="sectionHeading"><h2>③ ムービー編集</h2><button className="small" onClick={()=>setStep('theme')}>テーマ変更</button></div><div className={'preview '+aspect}><div className={'previewFrame '+theme+' backdrop-'+background}>
 {activePhoto?<div key={sceneKey+'-'+(activePhoto?.id||'')} className={'scenePhoto '+(playing&&phase==='photos'?'animate '+activePhoto.effect:'')} style={{'--scene-duration':activeDuration+'s'} as CSSProperties}><img src={activePhoto.url} alt="選択中の写真" /></div>:<span>写真を追加してください</span>}
-{playing&&phase==='intro'&&theme==='theater'?<div key={'curtain-'+sceneKey} className="curtainOverlay"><div className="curtainPanel curtainLeft"/><div className="curtainPanel curtainRight"/><div className="curtainCaption">{title}</div></div>:null}
+{playing&&phase==='intro'&&theme==='theater'?<div key={'curtain-'+sceneKey} className={'curtainOverlay curtain-'+curtainColor}><div className="curtainPanel curtainLeft"/><div className="curtainPanel curtainRight"/><div className="curtainCaption">{title}</div></div>:null}
 {playing&&phase==='outro'?<div className="endingScreen"><div>Fin.</div><small>{ending||title}</small></div>:null}
-{frame!=='none'&&!(playing&&phase==='intro'&&theme==='theater')?<div className={'photoDecoration '+frame} aria-hidden="true">{frame==='sakura'?'🌸　🌸':frame==='gold'?'✦　✦':'♡　♡'}</div>:null}
+{decoration!=='none'&&(!playing||phase==='photos')?<div className={'motionDecor decor-'+decoration} aria-hidden="true">{Array.from({length:12},(_,i)=><span key={i} style={{left:(i*37%95)+'%',animationDelay:-(i*.47)+'s'}}>{decoration==='petals'?'🌸':decoration==='glitter'||decoration==='light'?'✦':decoration==='bubbles'?'◯':decoration==='hearts'?'♥':decoration==='fireworks'?'✺':decoration==='snow'?'❄':'◆'}</span>)}</div>:null}
+{sticker!=='none'?<div className="previewSticker" aria-hidden="true">{symbols[sticker]}</div>:null}
+{frame!=='none'&&!(playing&&phase==='intro'&&theme==='theater')?<div className={'photoDecoration '+frame} aria-hidden="true">{frame==='sakura'?'🌸　🌸':frame==='gold'?'✦　✦':frame==='green'?'🌿　🌿':frame==='film'?'▣　▣':frame==='balloon'?'🎈　🎈':frame==='snow'?'❄　❄':frame==='sunflower'?'🌻　🌻':frame==='polaroid'?'▧　▧':frame==='album'?'📒　📒':'♡　♡'}</div>:null}
 {!playing||phase==='intro'?<div className="previewTitle">{title}</div>:null}
 </div></div><div className="actions"><button onClick={startPreview}>{playing?'■ 停止':'▶ 演出付きプレビュー'}</button><button onClick={()=>input.current?.click()}>＋ 写真追加</button></div><p className="note">カーテン・写真のフェード／ズーム／スライドを画面で確認できます。BGMは試聴用です。動画の書き出しは下の試験機能で確認できます。</p><h3>写真の並び順</h3><div className="strip">{photos.map((p,i)=><button key={p.id} className={'thumb '+(selected===i?'selected':'')} onClick={()=>{setSelected(i);setPlaying(false);setPhase('intro');setSceneKey(k=>k+1)}}><img src={p.url} alt={p.name}/><span>{i+1}</span></button>)}</div>{current&&<div className="editor"><h3>選択中の写真：{selected+1}枚目</h3><div className="actions"><button disabled={selected===0} onClick={()=>move(selected,-1)}>← 前へ</button><button disabled={selected===photos.length-1} onClick={()=>move(selected,1)}>後ろへ →</button><button className="danger" onClick={()=>remove(selected)}>削除</button></div><label>演出<select value={current.effect} onChange={e=>update(selected,{effect:e.target.value as Photo['effect']})}><option value="zoom">ゆっくりズーム</option><option value="fade">フェード</option><option value="slide">スライド</option></select></label>{mode==='photo'&&<label>表示時間：{current.duration}秒<input type="range" min="2" max="15" value={current.duration} onChange={e=>update(selected,{duration:Number(e.target.value)})}/></label>}</div>}<section className="designBox"><h3>🌸 写真の飾り・エンディング</h3>
+<label>用途別テンプレート<select value={template} onChange={e=>applyTemplate(e.target.value)}>
+<option value="custom">自分で組み合わせる</option><option value="graduation">🌸 卒園・入学</option><option value="wedding">💍 ウェディング</option><option value="birthday">🎂 誕生日</option><option value="travel">🏝️ 旅行</option><option value="growth">👣 成長記録</option><option value="theater">🎬 シアター</option></select></label>
+<label>カーテンの色<select value={curtainColor} onChange={e=>setCurtainColor(e.target.value as typeof curtainColor)}><option value="red">クラシック（赤）</option><option value="pink">パステル（ピンク）</option><option value="navy">ナイト（紺）</option><option value="gold">ゴールド</option></select></label>
+<label>背景<select value={background} onChange={e=>setBackground(e.target.value as typeof background)}><option value="default">テーマ標準</option><option value="sky">青空</option><option value="sakura">さくら</option><option value="stars">星空</option><option value="sunset">夕焼け</option><option value="sparkle">キラキラ</option><option value="rainbow">虹と雲</option></select></label>
 <label>写真フレーム<select value={frame} onChange={e=>setFrame(e.target.value as typeof frame)}>
-<option value="none">フレームなし</option><option value="sakura">桜（卒園・卒業）</option><option value="gold">ゴールド（結婚式・お祝い）</option><option value="soft">やさしいハート（誕生日・家族）</option></select></label>
+<option value="none">フレームなし</option><option value="sakura">さくら</option><option value="green">グリーン</option><option value="gold">エレガント</option><option value="polaroid">ポラロイド</option><option value="film">フィルム</option><option value="album">アルバム風</option><option value="balloon">バルーン</option><option value="soft">ハート</option><option value="snow">雪</option><option value="sunflower">ひまわり</option></select></label>
+<label>動く装飾<select value={decoration} onChange={e=>setDecoration(e.target.value as typeof decoration)}><option value="none">なし</option><option value="petals">花びら</option><option value="glitter">キラキラ</option><option value="bubbles">シャボン玉</option><option value="hearts">ハート</option><option value="fireworks">花火</option><option value="snow">雪</option><option value="confetti">紙吹雪</option><option value="light">光の粒</option></select></label>
+<label>スタンプ<select value={sticker} onChange={e=>setSticker(e.target.value)}><option value="none">なし</option>{Object.entries(symbols).map(([key,value])=><option key={key} value={key}>{value} {key}</option>)}</select></label>
 <label>最後に表示するメッセージ<textarea rows={2} maxLength={70} value={ending} onChange={e=>setEnding(e.target.value)} placeholder="ありがとう、たくさんの思い出"/></label>
-<p className="note">フレームは全写真に適用され、メッセージは動画の最後に表示されます。</p>
+<p className="note">テンプレートは後から個別に変更できます。装飾・スタンプは全写真に適用されます。</p>
 </section><section className="musicBox"><h3>🎵 BGMを選ぶ</h3>
 <label>音楽の種類<select value={bgm} onChange={e=>{stopMusic();setBgm(e.target.value as typeof bgm)}}>
 <option value="gentle">やさしい音色（試作用オリジナル音）</option>
@@ -162,5 +178,5 @@ return <main><header><div className="brand">✦ おもいでシアター</div><d
 </section><button className="secondary" onClick={()=>setStep('home')}>ホームに戻る</button></section>:null}
 <input ref={musicInput} type="file" accept="audio/*,.mp3,.m4a,.wav,.aac" hidden onChange={e=>{importMusic(e.target.files);e.target.value=''}}/>
 <input ref={input} type="file" accept="image/*" multiple hidden onChange={e=>{addPhotos(e.target.files);e.target.value=''}}/>
-<footer>おもいでシアター · 試作版 v0.5</footer></main>
+<footer>おもいでシアター · 試作版 v0.6</footer></main>
 }
