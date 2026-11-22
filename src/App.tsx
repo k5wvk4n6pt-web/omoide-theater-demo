@@ -1,7 +1,7 @@
 import {useEffect,useMemo,useRef,useState} from 'react';
 import type {CSSProperties} from 'react';
 import {exportMovie} from './exportMovie';
-type Photo={id:string;name:string;url:string;duration:number;effect:'fade'|'zoom'|'slide';frame?:string;decoration?:string;sticker?:string;caption?:string;zoom?:number;offsetX?:number;offsetY?:number};
+type Photo={id:string;name:string;url:string;duration:number;effect:'fade'|'zoom'|'slide'|'page'|'heart'|'curtain';frame?:string;decoration?:string;sticker?:string;caption?:string;zoom?:number;offsetX?:number;offsetY?:number;captionX?:number;captionY?:number};
 type Theme='theater'|'album'|'sakura'|'sparkle';
 const themes:{id:Theme;name:string;emoji:string;description:string}[]=[{id:'theater',name:'シアター',emoji:'🎭',description:'赤いカーテン'},{id:'album',name:'アルバム',emoji:'📖',description:'懐かしい思い出'},{id:'sakura',name:'さくら',emoji:'🌸',description:'卒園・卒業'},{id:'sparkle',name:'キラキラ',emoji:'✨',description:'誕生日・お祝い'}];
 const id=()=>Math.random().toString(36).slice(2);
@@ -32,6 +32,24 @@ const [playIndex,setPlayIndex]=useState(0);
 const [phase,setPhase]=useState<'intro'|'photos'|'outro'>('intro');
 const [sceneKey,setSceneKey]=useState(0);
 const input=useRef<HTMLInputElement>(null);
+const dragRef=useRef<{x:number;y:number;startX:number;startY:number;kind:'photo'|'caption';width:number;height:number}|null>(null);
+function beginDrag(e:React.PointerEvent<HTMLElement>,kind:'photo'|'caption'){
+ if(playing||!current)return;
+ e.preventDefault();e.stopPropagation();
+ const rect=e.currentTarget.closest('.previewFrame')?.getBoundingClientRect();
+ if(!rect)return;
+ dragRef.current={x:e.clientX,y:e.clientY,startX:kind==='photo'?(current.offsetX??0):(current.captionX??50),startY:kind==='photo'?(current.offsetY??0):(current.captionY??83),kind,width:rect.width,height:rect.height};
+ e.currentTarget.setPointerCapture(e.pointerId);
+}
+function moveDrag(e:React.PointerEvent<HTMLElement>){
+ const d=dragRef.current;if(!d||!current)return;
+ const dx=(e.clientX-d.x)/d.width*100,dy=(e.clientY-d.y)/d.height*100;
+ const clamp=(n:number,min:number,max:number)=>Math.min(max,Math.max(min,n));
+ if(d.kind==='photo')setPhotos(p=>p.map((x,i)=>i===selected?{...x,offsetX:clamp(d.startX+dx,-40,40),offsetY:clamp(d.startY+dy,-40,40)}:x));
+ else setPhotos(p=>p.map((x,i)=>i===selected?{...x,captionX:clamp(d.startX+dx,5,95),captionY:clamp(d.startY+dy,8,92)}:x));
+}
+function endDrag(){const d=dragRef.current;if(!d)return;dragRef.current=null;setUndoStack(stack=>[...stack.slice(-19),photos.map((p,i)=>i===selected?{...p,...(d.kind==='photo'?{offsetX:d.startX,offsetY:d.startY}:{captionX:d.startX,captionY:d.startY})}:p)]);setRedoStack([])}
+
 const musicInput=useRef<HTMLInputElement>(null);
 const audioRef=useRef<HTMLAudioElement|null>(null);
 const soundCtx=useRef<AudioContext|null>(null);
@@ -73,7 +91,7 @@ function move(i:number,offset:number){const to=i+offset;if(to<0||to>=photos.leng
 function update(i:number,patch:Partial<Photo>){setPhotos(p=>{setUndoStack(stack=>[...stack.slice(-19),p]);setRedoStack([]);return p.map((v,j)=>j===i?{...v,...patch}:v)})}
 function undo(){if(!undoStack.length)return;setRedoStack(x=>[...x,photos]);setPhotos(undoStack[undoStack.length-1]);setUndoStack(x=>x.slice(0,-1))}
 function redo(){if(!redoStack.length)return;setUndoStack(x=>[...x,photos]);setPhotos(redoStack[redoStack.length-1]);setRedoStack(x=>x.slice(0,-1))}
-function applyAll(){if(!current)return;setUndoStack(x=>[...x.slice(-19),photos]);setRedoStack([]);setPhotos(p=>p.map(x=>({...x,frame:current.frame,decoration:current.decoration,sticker:current.sticker,caption:current.caption,zoom:current.zoom,offsetX:current.offsetX,offsetY:current.offsetY,effect:current.effect,duration:current.duration})))}
+function applyAll(){if(!current)return;setUndoStack(x=>[...x.slice(-19),photos]);setRedoStack([]);setPhotos(p=>p.map(x=>({...x,frame:current.frame,decoration:current.decoration,sticker:current.sticker,caption:current.caption,zoom:current.zoom,offsetX:current.offsetX,offsetY:current.offsetY,captionX:current.captionX,captionY:current.captionY,effect:current.effect,duration:current.duration})))}
 
 const current=photos[selected];
 const activePhoto=photos[playing?playIndex:selected];
@@ -152,27 +170,27 @@ return <main><header><div className="brand">✦ おもいでシアター</div><d
 {step==='theme'?<section className="panel"><h2>① テーマを選ぶ</h2><div className="themeGrid">{themes.map(t=><button key={t.id} className={'theme '+(theme===t.id?'active':'')} onClick={()=>setTheme(t.id)}><span>{t.emoji}</span><strong>{t.name}</strong><small>{t.description}</small></button>)}</div><label>ムービーのタイトル<input value={title} onChange={e=>setTitle(e.target.value)} /></label><label>画面の向き<select value={aspect} onChange={e=>setAspect(e.target.value as typeof aspect)}><option value="wide">横型（16:9）</option><option value="vertical">縦型（9:16）</option></select></label><button className="primary" onClick={()=>setStep('photos')}>次へ：写真を選ぶ</button></section>:null}
 {step==='photos'?<section className="panel"><h2>② 写真を選ぶ</h2><p>iPhoneの写真からまとめて選べます。</p><button className="primary" onClick={()=>input.current?.click()}>写真を追加する</button><button className="secondary" onClick={()=>setStep('theme')}>戻る</button></section>:null}
 {step==='edit'?<section className="panel"><div className="sectionHeading"><h2>③ ムービー編集</h2><button className="small" onClick={()=>setStep('theme')}>テーマ変更</button></div><div className={'preview '+aspect}><div className={'previewFrame '+theme+' backdrop-'+background}>
-{activePhoto?<div key={sceneKey+'-'+(activePhoto?.id||'')} className={'scenePhoto '+(playing&&phase==='photos'?'animate '+activePhoto.effect:'')} style={{'--scene-duration':activeDuration+'s'} as CSSProperties}><img src={activePhoto.url} alt="選択中の写真" style={{transform:'scale('+(activePhoto.zoom??1)+') translate('+(activePhoto.offsetX??0)+'%,'+(activePhoto.offsetY??0)+'%)'}} /></div>:<span>写真を追加してください</span>}
+{activePhoto?<div key={sceneKey+'-'+(activePhoto?.id||'')} onPointerDown={e=>{if(editTool==='position')beginDrag(e,'photo')}} onPointerMove={moveDrag} onPointerUp={endDrag} onPointerCancel={endDrag} className={'scenePhoto '+(playing&&phase==='photos'?'animate '+activePhoto.effect:'')+(editTool==='position'?' draggablePhoto':'')} style={{'--scene-duration':activeDuration+'s'} as CSSProperties}><img src={activePhoto.url} alt="選択中の写真" style={{transform:'scale('+(activePhoto.zoom??1)+') translate('+(activePhoto.offsetX??0)+'%,'+(activePhoto.offsetY??0)+'%)'}} /></div>:<span>写真を追加してください</span>}
 {playing&&phase==='intro'&&theme==='theater'?<div key={'curtain-'+sceneKey} className={'curtainOverlay curtain-'+curtainColor}><div className="curtainPanel curtainLeft"/><div className="curtainPanel curtainRight"/><div className="curtainCaption">{title}</div></div>:null}
 {playing&&phase==='outro'?<div className="endingScreen"><div>Fin.</div><small>{ending||title}</small></div>:null}
 {shownDecor!=='none'&&(!playing||phase==='photos')?<div className={'motionDecor decor-'+shownDecor} aria-hidden="true">{Array.from({length:12},(_,i)=><span key={i} style={{left:(i*37%95)+'%',animationDelay:-(i*.47)+'s'}}>{shownDecor==='petals'?'🌸':shownDecor==='glitter'||shownDecor==='light'?'✦':shownDecor==='bubbles'?'◯':shownDecor==='hearts'?'♥':shownDecor==='fireworks'?'✺':shownDecor==='snow'?'❄':'◆'}</span>)}</div>:null}
 {shownSticker!=='none'?<div className="previewSticker" aria-hidden="true">{symbols[shownSticker]}</div>:null}
 {shownFrame!=='none'&&!(playing&&phase==='intro'&&theme==='theater')?<div className={'photoDecoration '+shownFrame} aria-hidden="true">{shownFrame==='sakura'?'🌸　🌸':shownFrame==='gold'?'✦　✦':shownFrame==='green'?'🌿　🌿':shownFrame==='film'?'▣　▣':shownFrame==='balloon'?'🎈　🎈':shownFrame==='snow'?'❄　❄':shownFrame==='sunflower'?'🌻　🌻':shownFrame==='polaroid'?'▧　▧':shownFrame==='album'?'📒　📒':'♡　♡'}</div>:null}
-{activePhoto?.caption&&(!playing||phase==='photos')?<div className="photoCaption">{activePhoto.caption}</div>:null}
+{activePhoto?.caption&&(!playing||phase==='photos')?<div className={'photoCaption '+(editTool==='text'?'draggableCaption':'')} style={{left:(activePhoto.captionX??50)+'%',top:(activePhoto.captionY??83)+'%',bottom:'auto',right:'auto'}} onPointerDown={e=>{if(editTool==='text')beginDrag(e,'caption')}} onPointerMove={moveDrag} onPointerUp={endDrag} onPointerCancel={endDrag}>{activePhoto.caption}</div>:null}
 {!playing||phase==='intro'?<div className="previewTitle">{title}</div>:null}
 </div></div><div className="actions"><button onClick={startPreview}>{playing?'■ 停止':'▶ 演出付きプレビュー'}</button><button onClick={()=>input.current?.click()}>＋ 写真追加</button></div><p className="note">カーテン・写真のフェード／ズーム／スライドを画面で確認できます。BGMは試聴用です。動画の書き出しは下の試験機能で確認できます。</p><h3>写真の並び順</h3><div className="strip">{photos.map((p,i)=><button key={p.id} className={'thumb '+(selected===i?'selected':'')} onClick={()=>{setSelected(i);setPlaying(false);setPhase('intro');setSceneKey(k=>k+1)}}><img src={p.url} alt={p.name}/><span>{i+1}</span></button>)}</div>{current&&<div className="editor"><h3>選択中の写真：{selected+1}枚目</h3><div className="photoToolGrid">{([['frame','▣','フレーム'],['text','T','文字'],['decor','✧','装飾'],['sticker','☺','スタンプ'],['transition','⇄','切り替え'],['duration','◷','表示時間'],['position','⛶','拡大・移動'],['apply','▢','一括適用']] as const).map(([key,icon,label])=><button key={key} className={editTool===key?'chosen':''} onClick={()=>setEditTool(editTool===key?null:key)}><span>{icon}</span><small>{label}</small></button>)}</div>
 {editTool?<div className="photoToolPanel">
 {editTool==='frame'?<label>この写真のフレーム<select value={current.frame??frame} onChange={e=>update(selected,{frame:e.target.value})}>{frameChoices.map(([key,label])=><option key={key} value={key}>{label}</option>)}</select></label>:null}
-{editTool==='text'?<label>写真に表示する文字<input value={current.caption??''} onChange={e=>update(selected,{caption:e.target.value})} placeholder="例：みんなと過ごした毎日"/></label>:null}
+{editTool==='text'?<label>写真に表示する文字（プレビューの文字を指で移動できます）<input value={current.caption??''} onChange={e=>update(selected,{caption:e.target.value})} placeholder="例：みんなと過ごした毎日"/></label>:null}
 {editTool==='decor'?<label>この写真の装飾<select value={current.decoration??decoration} onChange={e=>update(selected,{decoration:e.target.value})}>{decorChoices.map(([key,label])=><option key={key} value={key}>{label}</option>)}</select></label>:null}
 {editTool==='sticker'?<label>この写真のスタンプ<select value={current.sticker??sticker} onChange={e=>update(selected,{sticker:e.target.value})}><option value="none">なし</option>{Object.entries(symbols).map(([key,value])=><option key={key} value={key}>{value} {key}</option>)}</select></label>:null}
-{editTool==='transition'?<label>切り替え<select value={current.effect} onChange={e=>update(selected,{effect:e.target.value as Photo['effect']})}><option value="zoom">ゆっくりズーム</option><option value="fade">フェード</option><option value="slide">スライド</option></select></label>:null}
+{editTool==='transition'?<label>切り替え<select value={current.effect} onChange={e=>update(selected,{effect:e.target.value as Photo['effect']})}><option value="zoom">ゆっくりズーム</option><option value="fade">フェード</option><option value="slide">スライド</option><option value="page">ページめくり</option><option value="heart">ハート</option><option value="curtain">カーテン</option></select></label>:null}
 {editTool==='duration'?<label>表示時間：{current.duration}秒<input type="range" min="2" max="15" value={current.duration} onChange={e=>update(selected,{duration:Number(e.target.value)})}/>{mode==='music'?<small>音楽の長さ基準では個別の秒数は反映されません</small>:null}</label>:null}
-{editTool==='position'?<><label>拡大：{Math.round((current.zoom??1)*100)}%<input type="range" min="1" max="1.8" step=".05" value={current.zoom??1} onChange={e=>update(selected,{zoom:Number(e.target.value)})}/></label><label>左右位置<input type="range" min="-40" max="40" value={current.offsetX??0} onChange={e=>update(selected,{offsetX:Number(e.target.value)})}/></label><label>上下位置<input type="range" min="-40" max="40" value={current.offsetY??0} onChange={e=>update(selected,{offsetY:Number(e.target.value)})}/></label></>:null}
+{editTool==='position'?<><p className="note">プレビューの写真を指で動かせます。下のスライダーでも調整できます。</p><label>拡大：{Math.round((current.zoom??1)*100)}%<input type="range" min="1" max="1.8" step=".05" value={current.zoom??1} onChange={e=>update(selected,{zoom:Number(e.target.value)})}/></label><label>左右位置<input type="range" min="-40" max="40" value={current.offsetX??0} onChange={e=>update(selected,{offsetX:Number(e.target.value)})}/></label><label>上下位置<input type="range" min="-40" max="40" value={current.offsetY??0} onChange={e=>update(selected,{offsetY:Number(e.target.value)})}/></label></>:null}
 {editTool==='apply'?<><p className="note">選択中の写真の設定を全写真にコピーします。</p><button onClick={applyAll}>全写真に適用する</button></>:null}
 </div>:null}
 <div className="actions"><button disabled={!undoStack.length} onClick={undo}>↶ 取り消し</button><button disabled={!redoStack.length} onClick={redo}>↷ やり直し</button></div>
-<div className="actions"><button disabled={selected===0} onClick={()=>move(selected,-1)}>← 前へ</button><button disabled={selected===photos.length-1} onClick={()=>move(selected,1)}>後ろへ →</button><button className="danger" onClick={()=>remove(selected)}>削除</button></div><label>演出<select value={current.effect} onChange={e=>update(selected,{effect:e.target.value as Photo['effect']})}><option value="zoom">ゆっくりズーム</option><option value="fade">フェード</option><option value="slide">スライド</option></select></label>{mode==='photo'&&<label>表示時間：{current.duration}秒<input type="range" min="2" max="15" value={current.duration} onChange={e=>update(selected,{duration:Number(e.target.value)})}/></label>}</div>}<section className="designBox"><h3>🌸 写真の飾り・エンディング</h3>
+<div className="actions"><button disabled={selected===0} onClick={()=>move(selected,-1)}>← 前へ</button><button disabled={selected===photos.length-1} onClick={()=>move(selected,1)}>後ろへ →</button><button className="danger" onClick={()=>remove(selected)}>削除</button></div><label>演出<select value={current.effect} onChange={e=>update(selected,{effect:e.target.value as Photo['effect']})}><option value="zoom">ゆっくりズーム</option><option value="fade">フェード</option><option value="slide">スライド</option><option value="page">ページめくり</option><option value="heart">ハート</option><option value="curtain">カーテン</option></select></label>{mode==='photo'&&<label>表示時間：{current.duration}秒<input type="range" min="2" max="15" value={current.duration} onChange={e=>update(selected,{duration:Number(e.target.value)})}/></label>}</div>}<section className="designBox"><h3>🌸 写真の飾り・エンディング</h3>
 <label>用途別テンプレート<select value={template} onChange={e=>applyTemplate(e.target.value)}>
 <option value="custom">自分で組み合わせる</option><option value="graduation">🌸 卒園・入学</option><option value="wedding">💍 ウェディング</option><option value="birthday">🎂 誕生日</option><option value="travel">🏝️ 旅行</option><option value="growth">👣 成長記録</option><option value="theater">🎬 シアター</option></select></label>
 <label>カーテンの色<select value={curtainColor} onChange={e=>setCurtainColor(e.target.value as typeof curtainColor)}><option value="red">クラシック（赤）</option><option value="pink">パステル（ピンク）</option><option value="navy">ナイト（紺）</option><option value="gold">ゴールド</option></select></label>
@@ -203,5 +221,5 @@ return <main><header><div className="brand">✦ おもいでシアター</div><d
 </section><button className="secondary" onClick={()=>setStep('home')}>ホームに戻る</button></section>:null}
 <input ref={musicInput} type="file" accept="audio/*,.mp3,.m4a,.wav,.aac" hidden onChange={e=>{importMusic(e.target.files);e.target.value=''}}/>
 <input ref={input} type="file" accept="image/*" multiple hidden onChange={e=>{addPhotos(e.target.files);e.target.value=''}}/>
-<footer>おもいでシアター · 試作版 v0.7</footer></main>
+<footer>おもいでシアター · 試作版 v0.8</footer></main>
 }
