@@ -1,8 +1,18 @@
 export type ExportPhoto={url:string;duration:number;effect:'fade'|'zoom'|'slide'};
-export type ExportOptions={photos:ExportPhoto[];durations:number[];title:string;theme:string;aspect:'wide'|'vertical';bgm:'none'|'gentle'|'bright'|'file';audioUrl?:string;volume:number;onProgress:(p:number)=>void};
+export type ExportOptions={photos:ExportPhoto[];durations:number[];title:string;ending:string;frame:'none'|'sakura'|'gold'|'soft';theme:string;aspect:'wide'|'vertical';bgm:'none'|'gentle'|'bright'|'file';audioUrl?:string;volume:number;onProgress:(p:number)=>void};
 const sleep=(ms:number)=>new Promise<void>(resolve=>setTimeout(resolve,ms));
 function loadImage(url:string){return new Promise<HTMLImageElement>((resolve,reject)=>{const img=new Image();img.onload=()=>resolve(img);img.onerror=()=>reject(new Error('写真を読み込めませんでした'));img.src=url})}
 function drawImage(ctx:CanvasRenderingContext2D,img:HTMLImageElement,w:number,h:number,scale:number,shift:number){const ratio=Math.min(w/img.width,h/img.height);const dw=img.width*ratio*scale,dh=img.height*ratio*scale;ctx.drawImage(img,(w-dw)/2+shift,(h-dh)/2,dw,dh)}
+function decorate(ctx:CanvasRenderingContext2D,w:number,h:number,frame:ExportOptions['frame']){
+ if(frame==='none')return;
+ ctx.save();ctx.lineWidth=Math.max(8,w*.018);ctx.strokeStyle=frame==='gold'?'#d5aa52':frame==='sakura'?'#f7cfdf':'#f4d1e5';
+ ctx.strokeRect(10,10,w-20,h-20);
+ ctx.font=Math.round(w*.065)+'px sans-serif';ctx.textBaseline='top';ctx.fillStyle='#fff';
+ const symbol=frame==='sakura'?'🌸':frame==='gold'?'✦':'♡';
+ ctx.fillText(symbol,24,22);ctx.textAlign='right';ctx.fillText(symbol,w-24,22);
+ ctx.textBaseline='bottom';ctx.fillText(symbol,w-24,h-22);ctx.textAlign='left';ctx.fillText(symbol,24,h-22);
+ ctx.restore();
+}
 function text(ctx:CanvasRenderingContext2D,label:string,w:number,h:number,size:number){ctx.save();ctx.textAlign='center';ctx.textBaseline='middle';ctx.font='bold '+size+'px sans-serif';ctx.shadowColor='#000';ctx.shadowBlur=12;ctx.fillStyle='#fff6e8';ctx.fillText(label,w/2,h/2,w*.86);ctx.restore()}
 export async function exportMovie(o:ExportOptions):Promise<{blob:Blob;extension:string}>{
  const canvas=document.createElement('canvas');const wide=o.aspect==='wide';canvas.width=wide?960:540;canvas.height=wide?540:960;
@@ -29,8 +39,8 @@ export async function exportMovie(o:ExportOptions):Promise<{blob:Blob;extension:
    if(elapsed<6){
     if(o.theme==='theater'){if(imgs[0])drawImage(ctx,imgs[0],w,h,1,0);const progress=Math.max(0,Math.min(1,(elapsed-1.4)/4.2));const panel=w*.51*(1-progress);for(let side=0;side<2;side++){const x=side===0?0:w-panel;const grad=ctx.createLinearGradient(x,0,x+panel,0);grad.addColorStop(0,'#510e27');grad.addColorStop(.5,'#a3294c');grad.addColorStop(1,'#570c28');ctx.fillStyle=grad;ctx.fillRect(x,0,panel,h)}}
     text(ctx,o.title,w,h,wide?44:40);
-   }else if(elapsed>=total-6){text(ctx,'Fin.',w,h,wide?66:60);ctx.font='26px sans-serif';ctx.fillStyle='#f7e7d6';ctx.textAlign='center';ctx.fillText(o.title,w/2,h*.64,w*.85)}
-   else{let t=elapsed-6,index=0;while(index<o.durations.length-1&&t>=o.durations[index]){t-=o.durations[index];index++}const d=o.durations[index]||5;const fraction=Math.min(1,t/d);const photo=o.photos[index];const scale=photo.effect==='zoom'?1+.13*fraction:photo.effect==='slide'?1.06:1;const shift=photo.effect==='slide'?(0.05-0.1*fraction)*w:0;ctx.save();ctx.globalAlpha=photo.effect==='fade'?Math.min(1,t/.6,(d-t)/.6):1;drawImage(ctx,imgs[index],w,h,scale,shift);ctx.restore()}
+   }else if(elapsed>=total-6){text(ctx,'Fin.',w,h,wide?66:60);ctx.font='26px sans-serif';ctx.fillStyle='#f7e7d6';ctx.textAlign='center';ctx.fillText(o.ending||o.title,w/2,h*.64,w*.85)}
+   else{let t=elapsed-6,index=0;while(index<o.durations.length-1&&t>=o.durations[index]){t-=o.durations[index];index++}const d=o.durations[index]||5;const fraction=Math.min(1,t/d);const photo=o.photos[index];const scale=photo.effect==='zoom'?1+.13*fraction:photo.effect==='slide'?1.06:1;const shift=photo.effect==='slide'?(0.05-0.1*fraction)*w:0;ctx.save();ctx.globalAlpha=photo.effect==='fade'?Math.min(1,t/.6,(d-t)/.6):1;drawImage(ctx,imgs[index],w,h,scale,shift);ctx.restore();decorate(ctx,w,h,o.frame)}
    o.onProgress(Math.min(100,Math.round(elapsed/total*100)));
    if(elapsed>=total)break;
    await sleep(1000/24);
