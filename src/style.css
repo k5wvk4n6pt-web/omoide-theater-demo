@@ -37,3 +37,9 @@
 .previewSticker{position:absolute;z-index:3;right:8%;bottom:12%;font-size:clamp(22px,7vw,50px);pointer-events:none}
 
 .photoToolGrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;margin:16px 0}.photoToolGrid button{border:1px solid #e2dbe4;background:#28242d;color:#fff;border-radius:12px;min-height:70px;padding:8px 2px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px}.photoToolGrid button.chosen{background:#7d416a;border-color:#e4a7c8}.photoToolGrid button span{font-size:25px}.photoToolGrid button small{font-size:11px}.photoToolPanel{background:#f7f2f7;border:1px solid #e5d9e5;border-radius:13px;padding:12px;margin-bottom:12px}.photoToolPanel label{display:block}.photoCaption{position:absolute;z-index:4;bottom:12%;left:5%;right:5%;text-align:center;color:#fff;font-size:clamp(13px,3vw,22px);font-weight:700;text-shadow:0 1px 7px #000,0 2px 12px #000}
+
+.scenePhoto.draggablePhoto{touch-action:none;cursor:grab;z-index:1}.photoCaption.draggableCaption{touch-action:none;cursor:grab;pointer-events:auto}.photoCaption{transform:translate(-50%,-50%);width:max-content;max-width:88%;padding:4px 10px;user-select:none}
+.scenePhoto.animate.page img{animation:pageReveal var(--scene-duration) ease-in-out both;transform-origin:right center}.scenePhoto.animate.heart{animation:heartReveal var(--scene-duration) ease-in-out both}.scenePhoto.animate.curtain{animation:curtainReveal var(--scene-duration) ease-in-out both}
+@keyframes pageReveal{0%{clip-path:inset(0 100% 0 0);opacity:.5}15%{clip-path:inset(0 0 0 0);opacity:1}100%{clip-path:inset(0 0 0 0);opacity:1}}
+@keyframes heartReveal{0%{clip-path:circle(0% at 50% 50%)}20%{clip-path:circle(75% at 50% 50%)}100%{clip-path:circle(75% at 50% 50%)}}
+@keyframes curtainReveal{0%{clip-path:inset(0 50% 0 50%)}20%{clip-path:inset(0 0 0 0)}100%{clip-path:inset(0 0 0 0)}}
