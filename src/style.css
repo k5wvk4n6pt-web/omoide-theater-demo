@@ -70,3 +70,19 @@
 
 /* Native file pickers are activated by the visible add buttons only. */
 input[type="file"][hidden]{display:none!important}
+
+.openingOverlay{position:absolute;inset:0;z-index:9;display:flex;align-items:center;justify-content:center;overflow:hidden;isolation:isolate;text-align:center;background:linear-gradient(140deg,#403047,#a76b86)}
+.openingHeading{position:relative;z-index:2;max-width:85%;color:#fff8ee;font-size:clamp(23px,6vw,48px);font-weight:800;text-shadow:0 3px 14px #38253d;animation:openingAppear 2s both}
+.openingOrnaments{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:clamp(32px,9vw,85px);white-space:pre-wrap;opacity:.75;pointer-events:none;animation:openingFloat 5s ease-in-out infinite}
+.opening-sparkle{background:radial-gradient(circle,#b38d6d,#392b49 70%)}.opening-sparkle .openingOrnaments{color:#ffe5a0;animation:openingTwinkle 2s infinite alternate}
+.opening-sakura{background:linear-gradient(#ffeaf3,#f4b6d2)}.opening-sakura .openingOrnaments{animation:openingPetals 6s linear infinite}
+.opening-album{background:#b58b6b}.opening-album:before{content:'';position:absolute;inset:12% 10%;background:#f7e9cf;border:12px solid #8b5a45;box-shadow:0 8px 25px #543e39;transform-origin:left center;animation:openingBook 3s ease-out both}.opening-album .openingHeading{color:#65442e;text-shadow:none}
+.opening-countdown{background:#29252e}.opening-countdown .openingOrnaments{font-size:clamp(40px,11vw,100px);animation:openingCount 4.5s steps(1,end) both}.opening-countdown .openingHeading{animation:openingAppear .8s 4.4s both}
+.opening-rainbow{background:linear-gradient(#8bd3ff,#e5f8ff)}.opening-rainbow .openingHeading{color:#654c85;text-shadow:0 2px 8px #fff}.opening-rainbow .openingOrnaments{animation:openingFloat 4s infinite}
+.opening-fade{background:linear-gradient(140deg,#282238,#9d809d)}.opening-fade .openingOrnaments{opacity:.15}.opening-fade .openingHeading{animation:openingAppear 3.5s both}
+@keyframes openingAppear{from{opacity:0;transform:translateY(20px) scale(.9)}to{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes openingFloat{50%{transform:translateY(-16px)}}
+@keyframes openingTwinkle{from{opacity:.25;transform:scale(.92) rotate(-8deg)}to{opacity:1;transform:scale(1.07) rotate(8deg)}}
+@keyframes openingPetals{from{transform:translateY(-40px) rotate(-10deg)}to{transform:translateY(50px) rotate(12deg)}}
+@keyframes openingBook{from{transform:perspective(700px) rotateY(-75deg)}to{transform:perspective(700px) rotateY(0)}}
+@keyframes openingCount{0%{opacity:1}99%{opacity:1}100%{opacity:0}}
