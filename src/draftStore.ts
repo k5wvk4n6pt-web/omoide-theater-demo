@@ -1,5 +1,5 @@
 export type StoredPhoto={meta:Record<string,unknown>;blob:Blob};
-export type StoredProject={version:number;savedAt:string;settings:Record<string,unknown>;photos:StoredPhoto[];audio?:{name:string;seconds:number;blob:Blob}};
+export type StoredProject={version:number;savedAt:string;settings:Record<string,unknown>;photos:StoredPhoto[];audio?:{name:string;seconds:number;blob:Blob};switchFiles?:{id:string;blob:Blob}[]};
 const DB='omoide-theater-drafts',STORE='projects',KEY='latest';
 export type ProjectSummary={id:string;title:string;savedAt:string;photoCount:number;thumbnail?:Blob};
 function openDb():Promise<IDBDatabase>{return new Promise((resolve,reject)=>{const request=indexedDB.open(DB,1);request.onupgradeneeded=()=>{if(!request.result.objectStoreNames.contains(STORE))request.result.createObjectStore(STORE)};request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error)})}
