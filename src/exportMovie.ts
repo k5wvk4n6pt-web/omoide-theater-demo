@@ -1,4 +1,4 @@
-export type ExportPhoto={kind?:'image'|'video';url:string;duration:number;effect:'fade'|'zoom'|'slide'|'page'|'heart'|'curtain';frame?:string;decoration?:string;sticker?:string;caption?:string;zoom?:number;offsetX?:number;offsetY?:number;captionX?:number;captionY?:number;captionFont?:string;captionColor?:string;captionSize?:number;captionWeight?:number;captionOutline?:boolean;captionOutlineColor?:string;captionBackground?:boolean;captionMotion?:'none'|'fade'|'rise'|'slide'};
+export type ExportPhoto={trimStart?:number;sourceDuration?:number;keepAudio?:boolean;kind?:'image'|'video';url:string;duration:number;effect:'fade'|'zoom'|'slide'|'page'|'heart'|'curtain';frame?:string;decoration?:string;sticker?:string;caption?:string;zoom?:number;offsetX?:number;offsetY?:number;captionX?:number;captionY?:number;captionFont?:string;captionColor?:string;captionSize?:number;captionWeight?:number;captionOutline?:boolean;captionOutlineColor?:string;captionBackground?:boolean;captionMotion?:'none'|'fade'|'rise'|'slide'};
 export type ExportOptions={photos:ExportPhoto[];durations:number[];title:string;ending:string;frame:string;background:string;decoration:string;sticker:string;curtainColor:string;theme:string;aspect:'wide'|'vertical';bgm:'none'|'gentle'|'bright'|'file';audioUrl?:string;volume:number;onProgress:(p:number)=>void};
 const sleep=(ms:number)=>new Promise<void>(resolve=>setTimeout(resolve,ms));
 function loadImage(url:string){return new Promise<HTMLImageElement>((resolve,reject)=>{const img=new Image();img.onload=()=>resolve(img);img.onerror=()=>reject(new Error('写真を読み込めませんでした'));img.src=url})}
@@ -41,10 +41,14 @@ export async function exportMovie(o:ExportOptions):Promise<{blob:Blob;extension:
  const stream=canvas.captureStream(24);
  let ac:AudioContext|null=null,interval:number|undefined,audio:HTMLAudioElement|undefined;
  try{
-  if(o.bgm!=='none'&&o.volume>0){
-   ac=new AudioContext();const dest=ac.createMediaStreamDestination();const gain=ac.createGain();gain.gain.value=o.volume/100;gain.connect(dest);
+  const hasSourceAudio=o.photos.some(p=>p.kind==='video'&&p.keepAudio!==false);
+  if((o.bgm!=='none'&&o.volume>0)||hasSourceAudio){
+   ac=new AudioContext();const dest=ac.createMediaStreamDestination();
+   if(hasSourceAudio){videos.forEach((v,i)=>{if(v&&o.photos[i].keepAudio!==false){v.muted=false;const source=ac!.createMediaElementSource(v);const clipGain=ac!.createGain();clipGain.gain.value=1;source.connect(clipGain);clipGain.connect(dest)}})}
+   if(o.bgm!=='none'&&o.volume>0){const gain=ac.createGain();gain.gain.value=o.volume/100;gain.connect(dest);
    if(o.bgm==='file'&&o.audioUrl){audio=new Audio(o.audioUrl);audio.loop=true;const src=ac.createMediaElementSource(audio);src.connect(gain);await ac.resume();await audio.play()}
    else if(o.bgm!=='file'){await ac.resume();const notes=o.bgm==='gentle'?[261.63,329.63,392,523.25,392,329.63,293.66,349.23]:[392,493.88,587.33,783.99,659.25,587.33,493.88,523.25];let i=0;const play=()=>{if(!ac||ac.state==='closed')return;const oscillator=ac.createOscillator(),envelope=ac.createGain(),now=ac.currentTime;oscillator.type=o.bgm==='gentle'?'sine':'triangle';oscillator.frequency.value=notes[i++%notes.length];envelope.gain.setValueAtTime(.0001,now);envelope.gain.exponentialRampToValueAtTime(.10,now+.12);envelope.gain.exponentialRampToValueAtTime(.0001,now+1.1);oscillator.connect(envelope);envelope.connect(gain);oscillator.start(now);oscillator.stop(now+1.12)};play();interval=window.setInterval(play,o.bgm==='gentle'?1300:850)}
+   }
    dest.stream.getAudioTracks().forEach(track=>stream.addTrack(track));
   }
   const chunks:BlobPart[]=[];const recorder=new MediaRecorder(stream,{mimeType:mime,videoBitsPerSecond:2500000});
@@ -63,7 +67,7 @@ export async function exportMovie(o:ExportOptions):Promise<{blob:Blob;extension:
  if(photo.effect==='curtain'){const progress=Math.max(0,Math.min(1,t/.8));ctx.beginPath();ctx.rect(w/2-w/2*progress,0,w*progress,h);ctx.clip()}
  if(photo.kind==='video'){
   const v=videos[index];if(v){
-   if(lastVideoIndex!==index){videos.forEach((item,j)=>{if(item&&j!==index)item.pause()});lastVideoIndex=index;v.currentTime=0;void v.play().catch(()=>{})}
+   if(lastVideoIndex!==index){videos.forEach((item,j)=>{if(item&&j!==index)item.pause()});lastVideoIndex=index;v.currentTime=photo.trimStart??0;void v.play().catch(()=>{})}
    if(v.readyState>=2)drawImage(ctx,v as unknown as HTMLImageElement,w,h,photo.zoom??1,(photo.offsetX??0)/100*w,(photo.offsetY??0)/100*h);
   }
  }else if(imgs[index])drawImage(ctx,imgs[index]!,w,h,scale*(photo.zoom??1),shift+(photo.offsetX??0)/100*w,(photo.offsetY??0)/100*h);ctx.restore();decorate(ctx,w,h,photo.frame??o.frame);drawExtras(ctx,w,h,{...o,decoration:photo.decoration??o.decoration,sticker:photo.sticker??o.sticker},t);if(photo.caption){ctx.save();const font=photo.captionFont==='cursive'?'Yomogi, cursive':photo.captionFont??'sans-serif';const px=(photo.captionSize??22)*(w/350);const x=w*(photo.captionX??50)/100,y=h*(photo.captionY??83)/100;const motion=photo.captionMotion??'none';const progress=Math.max(0,Math.min(1,t/.85));if(motion==='fade')ctx.globalAlpha=progress;if(motion==='rise')ctx.translate(0,(1-progress)*h*.10);if(motion==='slide')ctx.translate(-(1-progress)*w*.35,0);ctx.font=(photo.captionWeight??700)+' '+Math.round(px)+'px '+font;ctx.textAlign='center';ctx.textBaseline='middle';const maxWidth=w*.88;const measured=Math.min(ctx.measureText(photo.caption).width,maxWidth);if(photo.captionBackground){ctx.fillStyle='rgba(0,0,0,.58)';ctx.fillRect(x-measured/2-14,y-px*.75,measured+28,px*1.5)}ctx.fillStyle=photo.captionColor??'#ffffff';if(photo.captionOutline){ctx.lineWidth=Math.max(1.5,px*.045)+((photo.captionWeight??700)>=900?3.2:(photo.captionWeight??700)>=700?1.6:0)*w/350;ctx.lineJoin='round';ctx.strokeStyle=photo.captionOutlineColor??'#222222';ctx.strokeText(photo.caption,x,y,maxWidth)}ctx.shadowBlur=0;const extra=(photo.captionWeight??700)>=900?1.35:(photo.captionWeight??700)>=700?.65:0;if(extra){ctx.lineWidth=Math.max(.5,extra*w/350);ctx.strokeStyle=photo.captionColor??'#ffffff';ctx.lineJoin='round';ctx.strokeText(photo.caption,x,y,maxWidth)}ctx.fillText(photo.caption,x,y,maxWidth);ctx.restore()}}
