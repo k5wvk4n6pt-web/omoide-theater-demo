@@ -169,8 +169,8 @@ const shownSticker=activePhoto?.sticker??sticker;
 function applyTemplate(t:string){setTemplate(t);const presets:Record<string,{theme:Theme;frame:typeof frame;background:typeof background;decoration:typeof decoration;title:string;ending:string}>={graduation:{theme:'sakura',frame:'sakura',background:'sakura',decoration:'petals',title:'卒園おめでとう',ending:'たくさんの思い出をありがとう'},wedding:{theme:'sparkle',frame:'gold',background:'sparkle',decoration:'glitter',title:'Wedding Story',ending:'いつまでもお幸せに'},birthday:{theme:'sparkle',frame:'balloon',background:'rainbow',decoration:'confetti',title:'Happy Birthday',ending:'笑顔あふれる一年に'},travel:{theme:'album',frame:'polaroid',background:'sky',decoration:'bubbles',title:'旅の思い出',ending:'また一緒に旅しよう'},growth:{theme:'album',frame:'soft',background:'rainbow',decoration:'hearts',title:'成長の記録',ending:'これからも元気に大きくなってね'},theater:{theme:'theater',frame:'film',background:'stars',decoration:'light',title:'大切な思い出',ending:'Fin.'}};const p=presets[t];if(p){setTheme(p.theme);setFrame(p.frame);setBackground(p.background);setDecoration(p.decoration);setTitle(p.title);setEnding(p.ending)}}
 const symbols:Record<string,string>={bear:'🧸',rabbit:'🐰',camera:'📷',clapper:'🎬',bouquet:'💐',crown:'👑',graduation:'🎓',diploma:'📜',cake:'🎂',gift:'🎁',balloons:'🎈',rainbow:'🌈',star:'⭐',heart:'💗',music:'🎵',treble:'🎼',sparkles:'✨'};
 
-function stopMusic(){
- switchTimers.current.forEach(window.clearTimeout);switchTimers.current=[];if(switchAudio.current){switchAudio.current.pause();switchAudio.current=null}
+function stopMusic(clearSwitches=true){
+ if(clearSwitches){switchTimers.current.forEach(window.clearTimeout);switchTimers.current=[];if(switchAudio.current){switchAudio.current.pause();switchAudio.current=null}}
  if(bgmDelay.current!==null){window.clearTimeout(bgmDelay.current);bgmDelay.current=null}
  if(audioRef.current){audioRef.current.pause();audioRef.current.currentTime=0;audioRef.current=null}
  if(synthTimer.current!==null){window.clearInterval(synthTimer.current);synthTimer.current=null}
@@ -178,7 +178,7 @@ function stopMusic(){
  setMusicPlaying(false);
 }
 function playMusic(){
- stopMusic();setMusicError('');
+ stopMusic(false);setMusicError('');
  if(bgm==='none')return;
  if(bgm==='file'){
   if(!audioFile){setMusicError('先に音楽ファイルを選んでください');return}
