@@ -1,5 +1,5 @@
 export type ExportPhoto={subtitles?:{id:string;text:string;start:number;end:number}[];subtitleColor?:string;subtitleSize?:number;subtitleOutline?:string;trimStart?:number;sourceDuration?:number;keepAudio?:boolean;kind?:'image'|'video';url:string;duration:number;effect:'fade'|'zoom'|'slide'|'page'|'heart'|'curtain';frame?:string;decoration?:string;sticker?:string;caption?:string;zoom?:number;offsetX?:number;offsetY?:number;captionX?:number;captionY?:number;captionFont?:string;captionColor?:string;captionSize?:number;captionWeight?:number;captionOutline?:boolean;captionOutlineColor?:string;captionBackground?:boolean;captionMotion?:'none'|'fade'|'rise'|'slide'};
-export type ExportOptions={photos:ExportPhoto[];durations:number[];title:string;ending:string;frame:string;background:string;decoration:string;sticker:string;curtainColor:string;theme:string;aspect:'wide'|'vertical';bgm:'none'|'gentle'|'bright'|'file';audioUrl?:string;volume:number;pauseBgmDuringVideo?:boolean;onProgress:(p:number)=>void};
+export type ExportOptions={photos:ExportPhoto[];durations:number[];title:string;ending:string;frame:string;background:string;decoration:string;sticker:string;curtainColor:string;opening?:'curtain'|'sparkle'|'sakura'|'album'|'countdown'|'rainbow'|'fade';theme:string;aspect:'wide'|'vertical';bgm:'none'|'gentle'|'bright'|'file';audioUrl?:string;volume:number;pauseBgmDuringVideo?:boolean;onProgress:(p:number)=>void};
 const sleep=(ms:number)=>new Promise<void>(resolve=>setTimeout(resolve,ms));
 function loadImage(url:string){return new Promise<HTMLImageElement>((resolve,reject)=>{const img=new Image();img.onload=()=>resolve(img);img.onerror=()=>reject(new Error('写真を読み込めませんでした'));img.src=url})}
 function drawImage(ctx:CanvasRenderingContext2D,img:HTMLImageElement|HTMLVideoElement,w:number,h:number,scale:number,shift:number,offsetY=0){const iw=img instanceof HTMLVideoElement?img.videoWidth:img.naturalWidth,ih=img instanceof HTMLVideoElement?img.videoHeight:img.naturalHeight;if(!iw||!ih)return false;const ratio=Math.min(w/iw,h/ih);const dw=iw*ratio*scale,dh=ih*ratio*scale;ctx.drawImage(img,(w-dw)/2+shift,(h-dh)/2+offsetY,dw,dh);return true}
@@ -23,6 +23,28 @@ function drawExtras(ctx:CanvasRenderingContext2D,w:number,h:number,o:ExportOptio
  ctx.restore()
 }
 function text(ctx:CanvasRenderingContext2D,label:string,w:number,h:number,size:number){ctx.save();ctx.textAlign='center';ctx.textBaseline='middle';ctx.font='bold '+size+'px sans-serif';ctx.shadowColor='#000';ctx.shadowBlur=12;ctx.fillStyle='#fff6e8';ctx.fillText(label,w/2,h/2,w*.86);ctx.restore()}
+function drawOpening(ctx:CanvasRenderingContext2D,o:ExportOptions,w:number,h:number,t:number){
+ const kind=o.opening??(o.theme==='theater'?'curtain':'fade');
+ ctx.save();
+ if(kind==='curtain'){
+  const progress=Math.max(0,Math.min(1,(t-1.4)/4.2)),panel=w*.51*(1-progress);
+  const shades:Record<string,[string,string,string]>={red:['#510e27','#a3294c','#570c28'],pink:['#a94e77','#f4a2c6','#a94e77'],navy:['#101b4e','#3559a1','#142050'],gold:['#8e5715','#e6b44e','#8e5715']};
+  for(let side=0;side<2;side++){const x=side===0?0:w-panel,grad=ctx.createLinearGradient(x,0,x+Math.max(1,panel),0),colors=shades[o.curtainColor]||shades.red;grad.addColorStop(0,colors[0]);grad.addColorStop(.5,colors[1]);grad.addColorStop(1,colors[2]);ctx.fillStyle=grad;ctx.fillRect(x,0,panel,h)}
+ }else if(kind==='sparkle'){
+  for(let i=0;i<36;i++){const x=(i*173+29)%w,y=(i*127+53)%h,alpha=.2+.8*Math.abs(Math.sin(t*2+i));ctx.globalAlpha=alpha;ctx.fillStyle=i%3?'#ffe3a0':'#ffffff';ctx.font=Math.round(w*(.023+(i%4)*.009))+'px sans-serif';ctx.fillText(i%2?'✦':'✧',x,y)}
+ }else if(kind==='sakura'){
+  ctx.fillStyle='#fff1f5';ctx.globalAlpha=.9;ctx.fillRect(0,0,w,h);ctx.globalAlpha=1;
+  for(let i=0;i<24;i++){ctx.font=Math.round(w*(.03+(i%3)*.014))+'px sans-serif';ctx.fillText('🌸',((i*137+t*25)% (w+80))-40,((i*89+t*(22+i%5*8))%(h+80))-40)}
+ }else if(kind==='album'){
+  const open=Math.max(.06,Math.min(1,t/2));ctx.fillStyle='#f7e9cf';ctx.fillRect(w*.08,h*.12,w*.84,h*.76);ctx.fillStyle='#b17b5e';ctx.fillRect(w*.08,h*.12,w*.84*(1-open),h*.76);ctx.strokeStyle='#a77c58';ctx.lineWidth=5;ctx.strokeRect(w*.08,h*.12,w*.84,h*.76);ctx.beginPath();ctx.moveTo(w*.5,h*.12);ctx.lineTo(w*.5,h*.88);ctx.stroke()
+ }else if(kind==='countdown'){
+  ctx.fillStyle='#27242c';ctx.fillRect(0,0,w,h);ctx.strokeStyle='#e7d9c4';ctx.lineWidth=3;ctx.beginPath();ctx.arc(w/2,h/2,Math.min(w,h)*.29,0,Math.PI*2);ctx.stroke();ctx.fillStyle='#f4e6d1';ctx.font='bold '+Math.round(h*.27)+'px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(String(Math.max(1,3-Math.floor(t/1.5))),w/2,h/2);ctx.textAlign='left';ctx.textBaseline='alphabetic'
+ }else if(kind==='rainbow'){
+  ctx.fillStyle='#c8edff';ctx.fillRect(0,0,w,h);const colors=['#ff819a','#ffbd7a','#ffe589','#91dba7','#8cc4f5','#c5a1ed'];ctx.lineWidth=Math.max(8,w*.026);colors.forEach((color,i)=>{ctx.strokeStyle=color;ctx.beginPath();ctx.arc(w/2,h*.88,w*(.36-i*.027),Math.PI,Math.PI*2);ctx.stroke()});ctx.font=Math.round(w*.13)+'px sans-serif';ctx.fillText('☁️',w*.05,h*.65);ctx.fillText('☁️',w*.79,h*.7)
+ }else{ctx.fillStyle='#2a2435';ctx.globalAlpha=Math.max(0,1-t/5);ctx.fillRect(0,0,w,h)}
+ ctx.restore();
+ if(kind!=='countdown'||t>=4.5){ctx.save();ctx.globalAlpha=kind==='fade'?Math.min(1,t/2):kind==='album'?Math.min(1,t/2):kind==='countdown'?Math.min(1,(t-4.5)*2):1;text(ctx,o.title,w,h,w>h?44:40);ctx.restore()}
+}
 export async function exportMovie(o:ExportOptions):Promise<{blob:Blob;extension:string}>{
  const canvas=document.createElement('canvas');const wide=o.aspect==='wide';canvas.width=wide?960:540;canvas.height=wide?540:960;
  const ctx=canvas.getContext('2d');if(!ctx)throw Error('描画機能を利用できません');
@@ -60,8 +82,7 @@ export async function exportMovie(o:ExportOptions):Promise<{blob:Blob;extension:
    if(bgmGain){let pos=elapsed-6,clipIndex=0;while(clipIndex<o.durations.length-1&&pos>=o.durations[clipIndex]){pos-=o.durations[clipIndex];clipIndex++}const videoNow=elapsed>=6&&elapsed<total-6&&o.photos[clipIndex]?.kind==='video';const target=o.pauseBgmDuringVideo&&videoNow?0:o.volume/100;if(Math.abs(bgmGain.gain.value-target)>.001)bgmGain.gain.setTargetAtTime(target,ac!.currentTime,.035)}
    const colors:Record<string,[string,string]>={sky:['#6ab9f4','#eaf8ff'],sakura:['#f5b8d0','#fff2f6'],stars:['#0e1238','#50418b'],sunset:['#f68e8d','#f9c57a'],sparkle:['#b89250','#fff2c4'],rainbow:['#94d4f4','#ffdce9']};const palette=colors[o.background];if(palette){const gradient=ctx.createLinearGradient(0,0,0,h);gradient.addColorStop(0,palette[0]);gradient.addColorStop(1,palette[1]);ctx.fillStyle=gradient}else ctx.fillStyle=o.theme==='sakura'?'#e8b8cb':o.theme==='album'?'#75604d':'#1c1425';ctx.fillRect(0,0,w,h);
    if(elapsed<6){
-    if(o.theme==='theater'){if(imgs[0])drawImage(ctx,imgs[0]!,w,h,1,0);const progress=Math.max(0,Math.min(1,(elapsed-1.4)/4.2));const panel=w*.51*(1-progress);for(let side=0;side<2;side++){const x=side===0?0:w-panel;const grad=ctx.createLinearGradient(x,0,x+panel,0);const shades:Record<string,[string,string,string]>={red:['#510e27','#a3294c','#570c28'],pink:['#a94e77','#f4a2c6','#a94e77'],navy:['#101b4e','#3559a1','#142050'],gold:['#8e5715','#e6b44e','#8e5715']};const shadesNow=shades[o.curtainColor]||shades.red;grad.addColorStop(0,shadesNow[0]);grad.addColorStop(.5,shadesNow[1]);grad.addColorStop(1,shadesNow[2]);ctx.fillStyle=grad;ctx.fillRect(x,0,panel,h)}}
-    text(ctx,o.title,w,h,wide?44:40);
+    drawOpening(ctx,o,w,h,elapsed);
    }else if(elapsed>=total-6){text(ctx,'Fin.',w,h,wide?66:60);ctx.font='26px sans-serif';ctx.fillStyle='#f7e7d6';ctx.textAlign='center';ctx.fillText(o.ending||o.title,w/2,h*.64,w*.85)}
    else{let t=elapsed-6,index=0;while(index<o.durations.length-1&&t>=o.durations[index]){t-=o.durations[index];index++}const d=o.durations[index]||5;const fraction=Math.min(1,t/d);const photo=o.photos[index];const scale=photo.effect==='zoom'?1+.13*fraction:photo.effect==='slide'?1.06:1;const shift=photo.effect==='slide'?(0.05-0.1*fraction)*w:0;ctx.save();ctx.globalAlpha=photo.effect==='fade'?Math.max(0,Math.min(1,t/.6,(d-t)/.6)):1;
  if(photo.effect==='page'){ctx.translate(w,0);ctx.scale(Math.max(.01,Math.min(1,t/.65)),1);ctx.translate(-w,0)}
