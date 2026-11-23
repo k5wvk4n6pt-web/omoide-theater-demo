@@ -216,3 +216,8 @@ input[type="file"][hidden]{display:none!important}
 
 /* v5.7 square format preview */
 .preview.square{aspect-ratio:1/1;max-width:min(100%,540px)}
+
+/* v5.9 album-specific assets: these are not the general photo-frame feature. */
+.previewFrame .albumCustomTitle{position:absolute;inset:0;z-index:12;background:#fff2e9 url('/omoide-theater-demo/album_title.png') center/100% 100% no-repeat;display:flex;align-items:center;justify-content:center;pointer-events:none}
+.previewFrame .albumCustomTitle span{position:relative;max-width:65%;margin-left:5%;font-size:clamp(15px,3vw,34px);font-weight:700;color:#865b63;text-align:center;text-shadow:0 1px 2px #fff}
+.previewFrame .albumCustomPage{position:absolute;inset:0;z-index:10;background:url('/omoide-theater-demo/album_page.png') center/100% 100% no-repeat;pointer-events:none}
