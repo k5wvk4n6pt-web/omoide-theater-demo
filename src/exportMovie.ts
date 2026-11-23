@@ -1,5 +1,5 @@
 export type ExportPhoto={subtitles?:{id:string;text:string;start:number;end:number}[];subtitleColor?:string;subtitleSize?:number;subtitleOutline?:string;trimStart?:number;sourceDuration?:number;keepAudio?:boolean;kind?:'image'|'video';url:string;duration:number;effect:'fade'|'zoom'|'slide'|'page'|'heart'|'curtain';frame?:string;decoration?:string;sticker?:string;caption?:string;zoom?:number;offsetX?:number;offsetY?:number;captionX?:number;captionY?:number;captionFont?:string;captionColor?:string;captionSize?:number;captionWeight?:number;captionOutline?:boolean;captionOutlineColor?:string;captionBackground?:boolean;captionMotion?:'none'|'fade'|'rise'|'slide'};
-export type ExportOptions={photos:ExportPhoto[];durations:number[];title:string;ending:string;frame:string;background:string;decoration:string;sticker:string;curtainColor:string;opening?:'curtain'|'sparkle'|'sakura'|'album'|'countdown'|'rainbow'|'fade';theme:string;aspect:'wide'|'vertical';bgm:'none'|'gentle'|'bright'|'file';audioUrl?:string;volume:number;bgmStart?:number;bgmOffset?:number;musicSwitches?:{id:string;url:string;start:number;offset:number;volume:number;fade:number}[];pauseBgmDuringVideo?:boolean;onProgress:(p:number)=>void};
+export type ExportOptions={photos:ExportPhoto[];durations:number[];title:string;ending:string;frame:string;background:string;decoration:string;sticker:string;curtainColor:string;opening?:'curtain'|'sparkle'|'sakura'|'album'|'countdown'|'rainbow'|'fade'|'gold_light'|'floral_wedding'|'sakura_tunnel'|'balloon_party'|'starry_story'|'retro_cinema';theme:string;aspect:'wide'|'vertical';bgm:'none'|'gentle'|'bright'|'file';audioUrl?:string;volume:number;bgmStart?:number;bgmOffset?:number;musicSwitches?:{id:string;url:string;start:number;offset:number;volume:number;fade:number}[];pauseBgmDuringVideo?:boolean;onProgress:(p:number)=>void};
 const sleep=(ms:number)=>new Promise<void>(resolve=>setTimeout(resolve,ms));
 function loadImage(url:string){return new Promise<HTMLImageElement>((resolve,reject)=>{const img=new Image();img.onload=()=>resolve(img);img.onerror=()=>reject(new Error('写真を読み込めませんでした'));img.src=url})}
 function drawImage(ctx:CanvasRenderingContext2D,img:HTMLImageElement|HTMLVideoElement,w:number,h:number,scale:number,shift:number,offsetY=0){const iw=img instanceof HTMLVideoElement?img.videoWidth:img.naturalWidth,ih=img instanceof HTMLVideoElement?img.videoHeight:img.naturalHeight;if(!iw||!ih)return false;const ratio=Math.min(w/iw,h/ih);const dw=iw*ratio*scale,dh=ih*ratio*scale;ctx.drawImage(img,(w-dw)/2+shift,(h-dh)/2+offsetY,dw,dh);return true}
@@ -23,10 +23,11 @@ function drawExtras(ctx:CanvasRenderingContext2D,w:number,h:number,o:ExportOptio
  ctx.restore()
 }
 function text(ctx:CanvasRenderingContext2D,label:string,w:number,h:number,size:number){ctx.save();ctx.textAlign='center';ctx.textBaseline='middle';ctx.font='bold '+size+'px sans-serif';ctx.shadowColor='#000';ctx.shadowBlur=12;ctx.fillStyle='#fff6e8';ctx.fillText(label,w/2,h/2,w*.86);ctx.restore()}
-function drawOpening(ctx:CanvasRenderingContext2D,o:ExportOptions,w:number,h:number,t:number){
+function drawOpening(ctx:CanvasRenderingContext2D,o:ExportOptions,w:number,h:number,t:number,openingImg:HTMLImageElement|null=null){
  const kind=o.opening??(o.theme==='theater'?'curtain':'fade');
  ctx.save();
- if(kind==='curtain'){
+ if(openingImg){ctx.fillStyle='#251d2a';ctx.fillRect(0,0,w,h);drawImage(ctx,openingImg,w,h,1,0);ctx.save();ctx.fillStyle='rgba(20,12,30,.35)';ctx.fillRect(0,0,w,h);ctx.restore();for(let i=0;i<18;i++){const x=(i*137+29)%w,y=((i*83+Math.sin(t+i)*24+h)%h);ctx.globalAlpha=.25+.45*Math.abs(Math.sin(t+i));ctx.fillStyle='#fff6d9';ctx.font=Math.round(w*.026)+'px sans-serif';ctx.fillText(kind==='sakura_tunnel'?'✿':kind==='balloon_party'?'●':'✦',x,y)}ctx.globalAlpha=1}
+ else if(kind==='curtain'){
   const progress=Math.max(0,Math.min(1,(t-1.4)/4.2)),panel=w*.51*(1-progress);
   const shades:Record<string,[string,string,string]>={red:['#510e27','#a3294c','#570c28'],pink:['#a94e77','#f4a2c6','#a94e77'],navy:['#101b4e','#3559a1','#142050'],gold:['#8e5715','#e6b44e','#8e5715']};
   for(let side=0;side<2;side++){const x=side===0?0:w-panel,grad=ctx.createLinearGradient(x,0,x+Math.max(1,panel),0),colors=shades[o.curtainColor]||shades.red;grad.addColorStop(0,colors[0]);grad.addColorStop(.5,colors[1]);grad.addColorStop(1,colors[2]);ctx.fillStyle=grad;ctx.fillRect(x,0,panel,h)}
@@ -52,6 +53,7 @@ export async function exportMovie(o:ExportOptions):Promise<{blob:Blob;extension:
  if(typeof canvas.captureStream!=='function'||typeof MediaRecorder==='undefined')throw Error('このiPhoneのブラウザは動画の書き出しに対応していません。iPhoneアプリ版での対応が必要です');
  const mime=['video/mp4;codecs=avc1.42E01E,mp4a.40.2','video/mp4','video/webm;codecs=vp8,opus','video/webm'].find(x=>MediaRecorder.isTypeSupported(x));
  if(!mime)throw Error('このブラウザで利用できる動画形式がありません');
+ const openingImg=o.opening&&['gold_light','floral_wedding','sakura_tunnel','balloon_party','starry_story','retro_cinema'].includes(o.opening)?await loadImage(import.meta.env.BASE_URL+o.opening+'.png'):null;
  const imgs=await Promise.all(o.photos.map(p=>p.kind==='video'?Promise.resolve(null):loadImage(p.url)));
  const videos=await Promise.all(o.photos.map(async p=>{
   if(p.kind!=='video')return null;
@@ -86,7 +88,7 @@ export async function exportMovie(o:ExportOptions):Promise<{blob:Blob;extension:
    if(bgmGain){let pos=elapsed-6,clipIndex=0;while(clipIndex<o.durations.length-1&&pos>=o.durations[clipIndex]){pos-=o.durations[clipIndex];clipIndex++}const videoNow=elapsed>=6&&elapsed<total-6&&o.photos[clipIndex]?.kind==='video';const firstSwitch=o.musicSwitches?.[0]?.start??Infinity;const target=elapsed<(o.bgmStart??0)||elapsed>=firstSwitch||o.pauseBgmDuringVideo&&videoNow?0:o.volume/100;if(Math.abs(bgmGain.gain.value-target)>.001)bgmGain.gain.setTargetAtTime(target,ac!.currentTime,.035)}
    const colors:Record<string,[string,string]>={sky:['#6ab9f4','#eaf8ff'],sakura:['#f5b8d0','#fff2f6'],stars:['#0e1238','#50418b'],sunset:['#f68e8d','#f9c57a'],sparkle:['#b89250','#fff2c4'],rainbow:['#94d4f4','#ffdce9']};const palette=colors[o.background];if(palette){const gradient=ctx.createLinearGradient(0,0,0,h);gradient.addColorStop(0,palette[0]);gradient.addColorStop(1,palette[1]);ctx.fillStyle=gradient}else ctx.fillStyle=o.theme==='sakura'?'#e8b8cb':o.theme==='album'?'#75604d':'#1c1425';ctx.fillRect(0,0,w,h);
    if(elapsed<6){
-    drawOpening(ctx,o,w,h,elapsed);
+    drawOpening(ctx,o,w,h,elapsed,openingImg);
    }else if(elapsed>=total-6){text(ctx,'Fin.',w,h,wide?66:60);ctx.font='26px sans-serif';ctx.fillStyle='#f7e7d6';ctx.textAlign='center';ctx.fillText(o.ending||o.title,w/2,h*.64,w*.85)}
    else{let t=elapsed-6,index=0;while(index<o.durations.length-1&&t>=o.durations[index]){t-=o.durations[index];index++}const d=o.durations[index]||5;const fraction=Math.min(1,t/d);const photo=o.photos[index];const effect=o.opening==='album'?'page':photo.effect;const scale=effect==='zoom'?1+.13*fraction:effect==='slide'?1.06:1;const shift=effect==='slide'?(0.05-0.1*fraction)*w:0;ctx.save();ctx.globalAlpha=effect==='fade'?Math.max(0,Math.min(1,t/.6,(d-t)/.6)):1;
  if(effect==='page'&&o.opening!=='album'){ctx.translate(w,0);ctx.scale(Math.max(.01,Math.min(1,t/.65)),1);ctx.translate(-w,0)}
