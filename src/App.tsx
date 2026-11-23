@@ -98,6 +98,7 @@ const synthTimer=useRef<number|null>(null);
 const [bgm,setBgm]=useState<'none'|'gentle'|'bright'|'file'>('gentle');
 const [audioFile,setAudioFile]=useState<{name:string;url:string;seconds:number}|null>(null);
 const [volume,setVolume]=useState(65);
+const [pauseBgmDuringVideo,setPauseBgmDuringVideo]=useState(true);
 const [musicError,setMusicError]=useState('');
 const [musicPlaying,setMusicPlaying]=useState(false);
 const [exporting,setExporting]=useState(false);
@@ -199,7 +200,7 @@ async function saveProject(){
   const audio=audioFile?{name:audioFile.name,seconds:audioFile.seconds,blob:await fetch(audioFile.url).then(r=>r.blob())}:undefined;
   const savedAt=new Date().toISOString();
   const targetId=projectId??id();
-  await persistProject(targetId,{version:1,savedAt,photos:items,audio,settings:{theme,title,ending,frame,background,decoration,sticker,curtainColor,template,mode,musicSeconds,duration,aspect,bgm,volume}});
+  await persistProject(targetId,{version:1,savedAt,photos:items,audio,settings:{theme,title,ending,frame,background,decoration,sticker,curtainColor,template,mode,musicSeconds,duration,aspect,bgm,volume,pauseBgmDuringVideo}});
   setProjectId(targetId);await refreshProjects();setDraftInfo('保存しました：'+new Date(savedAt).toLocaleString('ja-JP'));
  }catch(e){setDraftInfo('保存できませんでした。端末の空き容量やプライベートブラウズ設定をご確認ください。'+(e instanceof Error?' '+e.message:''))}
  finally{setDraftBusy(false)}
@@ -211,7 +212,7 @@ async function restoreProject(targetId:string){
   const next=draft.photos.map(p=>({...p.meta,url:URL.createObjectURL(p.blob)} as Photo));
   photosRef.current.forEach(p=>URL.revokeObjectURL(p.url));setPhotos(next);setSelected(0);setUndoStack([]);setRedoStack([]);setPlaying(false);
   const v=draft.settings;
-  setTheme(v.theme as Theme);setTitle(v.title as string);setEnding(v.ending as string);setFrame(v.frame as typeof frame);setBackground(v.background as typeof background);setDecoration(v.decoration as typeof decoration);setSticker(v.sticker as string);setCurtainColor(v.curtainColor as typeof curtainColor);setTemplate(v.template as string);setMode(v.mode as typeof mode);setMusicSeconds(v.musicSeconds as number);setDuration(v.duration as number);setAspect(v.aspect as typeof aspect);setBgm(v.bgm as typeof bgm);setVolume(v.volume as number);
+  setTheme(v.theme as Theme);setTitle(v.title as string);setEnding(v.ending as string);setFrame(v.frame as typeof frame);setBackground(v.background as typeof background);setDecoration(v.decoration as typeof decoration);setSticker(v.sticker as string);setCurtainColor(v.curtainColor as typeof curtainColor);setTemplate(v.template as string);setMode(v.mode as typeof mode);setMusicSeconds(v.musicSeconds as number);setDuration(v.duration as number);setAspect(v.aspect as typeof aspect);setBgm(v.bgm as typeof bgm);setVolume(v.volume as number);setPauseBgmDuringVideo(v.pauseBgmDuringVideo!==false);
   if(draft.audio){setAudioFile({name:draft.audio.name,seconds:draft.audio.seconds,url:URL.createObjectURL(draft.audio.blob)})}else setAudioFile(null);
   setProjectId(targetId);setStep('edit');setDraftInfo('保存した作品を開きました');
  }catch(e){setDraftInfo('読み込めませんでした。'+(e instanceof Error?' '+e.message:''))}
@@ -230,7 +231,7 @@ async function makeMovie(){
  if(!photos.length||exporting)return;
  setPlaying(false);stopMusic();setExportError('');setExportProgress(0);setExporting(true);
  try{
-  const {blob,extension}=await exportMovie({photos:photos.map(p=>({...p,frame:p.frame??frame,decoration:p.decoration??decoration,sticker:p.sticker??sticker})),durations:computed,title,ending,frame,background,decoration,sticker,curtainColor,theme,aspect,bgm,audioUrl:audioFile?.url,volume,onProgress:setExportProgress});
+  const {blob,extension}=await exportMovie({photos:photos.map(p=>({...p,frame:p.frame??frame,decoration:p.decoration??decoration,sticker:p.sticker??sticker})),durations:computed,title,ending,frame,background,decoration,sticker,curtainColor,theme,aspect,bgm,audioUrl:audioFile?.url,volume,pauseBgmDuringVideo,onProgress:setExportProgress});
   if(exportUrl.current)URL.revokeObjectURL(exportUrl.current);
   const url=URL.createObjectURL(blob);exportUrl.current=url;
   setExportResult({url,name:'omoide-theater.'+extension,blob});
@@ -253,6 +254,7 @@ function importMusic(files:FileList|null){
  probe.onerror=()=>{URL.revokeObjectURL(url);setMusicError('音楽ファイルを読み取れませんでした')};
 }
 useEffect(()=>{if(!playing)stopMusic()},[playing]);
+useEffect(()=>{if(!playing)return;const isVideo=phase==='photos'&&photos[playIndex]?.kind==='video';const pause=pauseBgmDuringVideo&&isVideo;if(audioRef.current){if(pause)audioRef.current.pause();else void audioRef.current.play().catch(()=>{})}if(soundCtx.current){if(pause)void soundCtx.current.suspend();else void soundCtx.current.resume()}},[playing,phase,playIndex,pauseBgmDuringVideo,photos]);
 
 
 return <main><header><div className="brand">✦ おもいでシアター</div><div className="subtitle">写真が、一本の映画になる。</div></header>
@@ -301,6 +303,7 @@ return <main><header><div className="brand">✦ おもいでシアター</div><d
 <option value="none">音楽なし</option></select></label>
 <div className="actions"><button onClick={()=>musicInput.current?.click()}>＋ 音楽ファイルを選ぶ</button><button disabled={bgm==='none'||(bgm==='file'&&!audioFile)} onClick={()=>musicPlaying?stopMusic():playMusic()}>{musicPlaying?'■ BGM停止':'♪ BGMを試聴'}</button></div>
 {audioFile?<p className="note">読み込み済み：{audioFile.name}（{audioFile.seconds||'不明'}秒）</p>:null}
+<label className="inlineOption"><input type="checkbox" checked={pauseBgmDuringVideo} onChange={e=>setPauseBgmDuringVideo(e.target.checked)}/> 動画の再生中はBGMを止める（写真に戻ると再開）</label>
 <label>BGM音量：{volume}%<input type="range" min="0" max="100" step="5" value={volume} onChange={e=>setVolume(Number(e.target.value))}/></label>
 {musicError?<p className="musicError" role="alert">{musicError}</p>:null}
 <p className="note">アプリ内の音は動作確認用の簡易音源です。正式なBGM曲は後から追加します。Apple Musicなど保護された配信曲は取り込めません。</p>
@@ -313,5 +316,5 @@ return <main><header><div className="brand">✦ おもいでシアター</div><d
 </section><button className="secondary" onClick={()=>setStep('home')}>ホームに戻る</button></section>:null}
 <input ref={musicInput} type="file" accept="audio/*,.mp3,.m4a,.wav,.aac" hidden onChange={e=>{importMusic(e.target.files);e.target.value=''}}/>
 <input ref={input} type="file" accept="image/*" multiple hidden onChange={e=>{void addPhotos(e.target.files);e.target.value=''}}/><input ref={videoInput} type="file" accept="video/*,.mov,.mp4,.m4v" multiple hidden onChange={e=>{void addPhotos(e.target.files);e.target.value=''}}/>
-<footer>おもいでシアター · 試作版 v2.8</footer></main>
+<footer>おもいでシアター · 試作版 v2.9</footer></main>
 }
