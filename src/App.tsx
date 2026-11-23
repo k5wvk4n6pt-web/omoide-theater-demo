@@ -4,6 +4,7 @@ import {exportMovie} from './exportMovie';
 import {listProjects,saveProject as persistProject,loadProject,deleteProject,duplicateProject} from './draftStore';
 import type {ProjectSummary} from './draftStore';
 type SubtitleCue={id:string;text:string;start:number;end:number};
+type MusicSwitch={id:string;name:string;url:string;seconds:number;start:number;anchor:'time'|'photo';photoId?:string;offset:number;volume:number;fade:number};
 type Photo={subtitles?:SubtitleCue[];subtitleColor?:string;subtitleSize?:number;subtitleOutline?:string;trimStart?:number;sourceDuration?:number;keepAudio?:boolean;kind?:'image'|'video';id:string;name:string;url:string;duration:number;effect:'fade'|'zoom'|'slide'|'page'|'heart'|'curtain';frame?:string;decoration?:string;sticker?:string;caption?:string;zoom?:number;offsetX?:number;offsetY?:number;captionX?:number;captionY?:number;captionFont?:string;captionColor?:string;captionSize?:number;captionWeight?:number;captionOutline?:boolean;captionOutlineColor?:string;captionBackground?:boolean;captionMotion?:'none'|'fade'|'rise'|'slide'};
 type Theme='theater'|'album'|'sakura'|'sparkle';
 const themes:{id:Theme;name:string;emoji:string;description:string}[]=[{id:'theater',name:'シアター',emoji:'🎭',description:'赤いカーテン'},{id:'album',name:'アルバム',emoji:'📖',description:'懐かしい思い出'},{id:'sakura',name:'さくら',emoji:'🌸',description:'卒園・卒業'},{id:'sparkle',name:'キラキラ',emoji:'✨',description:'誕生日・お祝い'}];
@@ -102,6 +103,10 @@ const [audioFile,setAudioFile]=useState<{name:string;url:string;seconds:number}|
 const [volume,setVolume]=useState(65);
 const [bgmStart,setBgmStart]=useState(0);
 const [bgmOffset,setBgmOffset]=useState(0);
+const [musicSwitches,setMusicSwitches]=useState<MusicSwitch[]>([]);
+const switchInput=useRef<HTMLInputElement>(null);
+const switchTimers=useRef<number[]>([]);
+const switchAudio=useRef<HTMLAudioElement|null>(null);
 const bgmDelay=useRef<number|null>(null);
 const [pauseBgmDuringVideo,setPauseBgmDuringVideo]=useState(true);
 const [previewSound,setPreviewSound]=useState(false);
@@ -123,6 +128,8 @@ useEffect(()=>{if(audioRef.current)audioRef.current.volume=volume/100},[volume])
 const intro=6,outro=6;
 const computed=useMemo(()=>mode==='photo'?photos.map(p=>p.duration):photos.map(p=>p.kind==='video'?p.duration:Math.max(1,(musicSeconds-intro-outro-photos.filter(x=>x.kind==='video').reduce((a,b)=>a+b.duration,0))/Math.max(1,photos.filter(x=>x.kind!=='video').length))),[photos,mode,musicSeconds]);
 const total=intro+outro+computed.reduce((a,b)=>a+b,0);
+const switchAt=(m:MusicSwitch)=>m.anchor==='photo'&&m.photoId?intro+computed.slice(0,Math.max(0,photos.findIndex(p=>p.id===m.photoId))).reduce((a,b)=>a+b,0):m.start;
+const orderedSwitches=[...musicSwitches].sort((a,b)=>switchAt(a)-switchAt(b));
 useEffect(()=>{
 if(!playing||photos.length===0)return;
 const seconds=phase==='intro'?intro:phase==='outro'?outro:computed[playIndex];
@@ -163,6 +170,7 @@ function applyTemplate(t:string){setTemplate(t);const presets:Record<string,{the
 const symbols:Record<string,string>={bear:'🧸',rabbit:'🐰',camera:'📷',clapper:'🎬',bouquet:'💐',crown:'👑',graduation:'🎓',diploma:'📜',cake:'🎂',gift:'🎁',balloons:'🎈',rainbow:'🌈',star:'⭐',heart:'💗',music:'🎵',treble:'🎼',sparkles:'✨'};
 
 function stopMusic(){
+ switchTimers.current.forEach(window.clearTimeout);switchTimers.current=[];if(switchAudio.current){switchAudio.current.pause();switchAudio.current=null}
  if(bgmDelay.current!==null){window.clearTimeout(bgmDelay.current);bgmDelay.current=null}
  if(audioRef.current){audioRef.current.pause();audioRef.current.currentTime=0;audioRef.current=null}
  if(synthTimer.current!==null){window.clearInterval(synthTimer.current);synthTimer.current=null}
@@ -194,10 +202,12 @@ function playMusic(){
 useEffect(()=>{const el=previewVideo.current;if(!el)return;if(playing&&phase==='photos'){const clip=photos[playIndex];if(clip?.kind!=='video')return;el.muted=!previewSound||clip.keepAudio===false;el.defaultMuted=!previewSound||clip.keepAudio===false;el.playsInline=true;const begin=()=>{const start=clip.trimStart??0;try{if(Math.abs(el.currentTime-start)>.15)el.currentTime=start}catch{}void el.play().catch(()=>{el.muted=true;el.defaultMuted=true;setPreviewSound(false);void el.play().catch(()=>setMusicError('動画を再生できません。動画をタップして再生をお試しください'))})};if(el.readyState>=1)begin();else{el.addEventListener('loadedmetadata',begin,{once:true});el.load()}return()=>{el.removeEventListener('loadedmetadata',begin);el.pause()}}else{el.pause()}},[playing,phase,playIndex,sceneKey,previewSound]);
 useEffect(()=>{setSubtitleTime(0)},[playIndex,selected,sceneKey]);
 useEffect(()=>{if(!playing||phase!=='photos')return;const start=performance.now();const timer=window.setInterval(()=>setSubtitleTime(Math.min(computed[playIndex]??5,(performance.now()-start)/1000)),100);return()=>clearInterval(timer)},[playing,phase,playIndex,sceneKey]);
+async function addMusicSwitch(files:FileList|null){const file=files?.[0];if(!file)return;const url=URL.createObjectURL(file);const seconds=await new Promise<number>(resolve=>{const a=new Audio();a.preload='metadata';a.onloadedmetadata=()=>resolve(Number.isFinite(a.duration)?Math.round(a.duration):0);a.onerror=()=>resolve(0);a.src=url});setMusicSwitches(v=>[...v,{id:id(),name:file.name,url,seconds,start:Math.min(total,6),anchor:'time',offset:0,volume:volume,fade:1}])}
 function startPreview(){
  if(!photos.length)return;
  if(playing){setPlaying(false);setPhase('intro');stopMusic()}
- else{setPlayIndex(0);setPhase('intro');setPlaying(true);if(bgmStart<=0)playMusic();else{stopMusic();bgmDelay.current=window.setTimeout(()=>{bgmDelay.current=null;playMusic()},bgmStart*1000)}}
+ else{setPlayIndex(0);setPhase('intro');setPlaying(true);stopMusic();if(bgmStart<=0)playMusic();else{bgmDelay.current=window.setTimeout(()=>{bgmDelay.current=null;playMusic()},bgmStart*1000)}
+ for(const m of orderedSwitches){const at=Math.max(0,switchAt(m));const timer=window.setTimeout(()=>{if(switchAudio.current)switchAudio.current.pause();if(audioRef.current)audioRef.current.pause();if(soundCtx.current)void soundCtx.current.suspend();const a=new Audio(m.url);switchAudio.current=a;a.volume=Math.min(1,m.volume/100);a.loop=true;const seek=()=>{try{a.currentTime=Math.min(m.offset,Math.max(0,(a.duration||m.seconds)-.1))}catch{}};a.addEventListener('loadedmetadata',seek,{once:true});seek();void a.play().catch(()=>setMusicError('切り替えBGMを再生できませんでした'))},at*1000);switchTimers.current.push(timer)} }
  setSceneKey(k=>k+1)
 }
 async function saveProject(){
@@ -205,9 +215,10 @@ async function saveProject(){
  try{
   const items=await Promise.all(photos.map(async p=>({meta:{...p,url:undefined},blob:await fetch(p.url).then(r=>r.blob())})));
   const audio=audioFile?{name:audioFile.name,seconds:audioFile.seconds,blob:await fetch(audioFile.url).then(r=>r.blob())}:undefined;
+  const switchFiles=await Promise.all(musicSwitches.map(async m=>({id:m.id,blob:await fetch(m.url).then(r=>r.blob())})));
   const savedAt=new Date().toISOString();
   const targetId=projectId??id();
-  await persistProject(targetId,{version:1,savedAt,photos:items,audio,settings:{theme,title,ending,frame,background,decoration,sticker,curtainColor,opening,template,mode,musicSeconds,duration,aspect,bgm,volume,bgmStart,bgmOffset,pauseBgmDuringVideo}});
+  await persistProject(targetId,{version:1,savedAt,photos:items,audio,switchFiles,settings:{theme,title,ending,frame,background,decoration,sticker,curtainColor,opening,template,mode,musicSeconds,duration,aspect,bgm,volume,bgmStart,bgmOffset,musicSwitches:musicSwitches.map(({url,...m})=>m),pauseBgmDuringVideo}});
   setProjectId(targetId);await refreshProjects();setDraftInfo('保存しました：'+new Date(savedAt).toLocaleString('ja-JP'));
  }catch(e){setDraftInfo('保存できませんでした。端末の空き容量やプライベートブラウズ設定をご確認ください。'+(e instanceof Error?' '+e.message:''))}
  finally{setDraftBusy(false)}
@@ -220,6 +231,7 @@ async function restoreProject(targetId:string){
   photosRef.current.forEach(p=>URL.revokeObjectURL(p.url));setPhotos(next);setSelected(0);setUndoStack([]);setRedoStack([]);setPlaying(false);
   const v=draft.settings;
   setTheme(v.theme as Theme);setTitle(v.title as string);setEnding(v.ending as string);setFrame(v.frame as typeof frame);setBackground(v.background as typeof background);setDecoration(v.decoration as typeof decoration);setSticker(v.sticker as string);setCurtainColor((v.curtainColor as typeof curtainColor)||'red');setOpening((v.opening as typeof opening)||(v.theme==='theater'?'curtain':'fade'));setTemplate(v.template as string);setMode(v.mode as typeof mode);setMusicSeconds(v.musicSeconds as number);setDuration(v.duration as number);setAspect(v.aspect as typeof aspect);setBgm(v.bgm as typeof bgm);setVolume(v.volume as number);setBgmStart(Math.max(0,Number(v.bgmStart)||0));setBgmOffset(Math.max(0,Number(v.bgmOffset)||0));setPauseBgmDuringVideo(v.pauseBgmDuringVideo!==false);
+  setMusicSwitches((Array.isArray(v.musicSwitches)?v.musicSwitches:[]).map((m:MusicSwitch)=>{const item=draft.switchFiles?.find(x=>x.id===m.id);return {...m,url:item?URL.createObjectURL(item.blob):''}}).filter((m:MusicSwitch)=>m.url));
   if(draft.audio){setAudioFile({name:draft.audio.name,seconds:draft.audio.seconds,url:URL.createObjectURL(draft.audio.blob)})}else setAudioFile(null);
   setProjectId(targetId);setStep('edit');setDraftInfo('保存した作品を開きました');
  }catch(e){setDraftInfo('読み込めませんでした。'+(e instanceof Error?' '+e.message:''))}
@@ -232,13 +244,13 @@ async function eraseProject(targetId:string){
 async function copyProject(targetId:string){
  try{await duplicateProject(targetId,id());await refreshProjects();setDraftInfo('作品を複製しました')}catch{setDraftInfo('複製できませんでした')}
 }
-function newProject(){setPlaying(false);stopMusic();setPhotos([]);setProjectId(null);setSelected(0);setUndoStack([]);setRedoStack([]);setAudioFile(null);setTitle('大切な思い出');setEnding('ありがとう、たくさんの思い出');setEditPage('opening');setStep('edit');setDraftInfo('')}
+function newProject(){setPlaying(false);stopMusic();setPhotos([]);setProjectId(null);setSelected(0);setUndoStack([]);setRedoStack([]);setAudioFile(null);setMusicSwitches([]);setTitle('大切な思い出');setEnding('ありがとう、たくさんの思い出');setEditPage('opening');setStep('edit');setDraftInfo('')}
 
 async function makeMovie(){
  if(!photos.length||exporting)return;
  setPlaying(false);stopMusic();setExportError('');setExportProgress(0);setExporting(true);
  try{
-  const {blob,extension}=await exportMovie({photos:photos.map(p=>({...p,frame:p.frame??frame,decoration:p.decoration??decoration,sticker:p.sticker??sticker})),durations:computed,title,ending,frame,background,decoration,sticker,curtainColor,opening,theme,aspect,bgm,audioUrl:audioFile?.url,volume,bgmStart,bgmOffset,pauseBgmDuringVideo,onProgress:setExportProgress});
+  const {blob,extension}=await exportMovie({photos:photos.map(p=>({...p,frame:p.frame??frame,decoration:p.decoration??decoration,sticker:p.sticker??sticker})),durations:computed,title,ending,frame,background,decoration,sticker,curtainColor,opening,theme,aspect,bgm,audioUrl:audioFile?.url,volume,bgmStart,bgmOffset,musicSwitches:orderedSwitches.map(m=>({...m,start:switchAt(m)})),pauseBgmDuringVideo,onProgress:setExportProgress});
   if(exportUrl.current)URL.revokeObjectURL(exportUrl.current);
   const url=URL.createObjectURL(blob);exportUrl.current=url;
   setExportResult({url,name:'omoide-theater.'+extension,blob});
@@ -313,6 +325,7 @@ return <main><header><div className="brand">✦ おもいでシアター</div><d
 {audioFile?<p className="note">読み込み済み：{audioFile.name}（{audioFile.seconds||'不明'}秒）</p>:null}
 <label>BGMを動画の何秒目から流す？：{bgmStart}秒<input type="range" min="0" max={Math.max(0,Math.ceil(total))} step="1" value={Math.min(bgmStart,Math.ceil(total))} onChange={e=>setBgmStart(Number(e.target.value))}/><input type="number" min="0" max={Math.ceil(total)} value={bgmStart} onChange={e=>setBgmStart(Math.max(0,Math.min(Math.ceil(total),Number(e.target.value)||0)))}/></label>
 {bgm==='file'&&audioFile?<label>曲のどの位置から使う？：{bgmOffset}秒<input type="range" min="0" max={Math.max(0,Math.floor(audioFile.seconds)-1)} step="1" value={Math.min(bgmOffset,Math.max(0,Math.floor(audioFile.seconds)-1))} onChange={e=>setBgmOffset(Number(e.target.value))}/><input type="number" min="0" max={Math.max(0,Math.floor(audioFile.seconds)-1)} value={bgmOffset} onChange={e=>setBgmOffset(Math.max(0,Math.min(Math.max(0,Math.floor(audioFile.seconds)-1),Number(e.target.value)||0)))}/></label>:null}
+<div className="musicSwitchEditor"><h3>🎶 曲を途中で切り替える</h3><p className="note">追加した曲は指定位置から次の曲まで流れます。写真・動画の開始位置、または秒数で指定できます。</p><button onClick={()=>switchInput.current?.click()}>＋ 切り替えるBGMを追加</button>{orderedSwitches.map((m,i)=><div className="musicSwitchCard" key={m.id}><strong>曲{i+2}：{m.name}</strong><label>切り替え位置<select value={m.anchor} onChange={e=>setMusicSwitches(v=>v.map(x=>x.id===m.id?{...x,anchor:e.target.value as 'time'|'photo'}:x))}><option value="time">秒数で指定</option><option value="photo">写真・動画から指定</option></select></label>{m.anchor==='time'?<label>動画の何秒目？<input type="number" min="0" max={Math.ceil(total)} value={m.start} onChange={e=>setMusicSwitches(v=>v.map(x=>x.id===m.id?{...x,start:Math.max(0,Number(e.target.value)||0)}:x))}/></label>:<label>切り替える写真・動画<select value={m.photoId||photos[0]?.id||''} onChange={e=>setMusicSwitches(v=>v.map(x=>x.id===m.id?{...x,photoId:e.target.value}:x))}>{photos.map((p,j)=><option key={p.id} value={p.id}>{j+1}. {p.name}</option>)}</select></label>}<label>曲の再生開始（秒）<input type="number" min="0" max={m.seconds||3600} value={m.offset} onChange={e=>setMusicSwitches(v=>v.map(x=>x.id===m.id?{...x,offset:Math.max(0,Number(e.target.value)||0)}:x))}/></label><label>音量 {m.volume}%<input type="range" min="0" max="100" value={m.volume} onChange={e=>setMusicSwitches(v=>v.map(x=>x.id===m.id?{...x,volume:Number(e.target.value)}:x))}/></label><label>切り替えのフェード（秒）<input type="number" min="0" max="5" step=".5" value={m.fade} onChange={e=>setMusicSwitches(v=>v.map(x=>x.id===m.id?{...x,fade:Math.max(0,Math.min(5,Number(e.target.value)||0))}:x))}/></label><button onClick={()=>setMusicSwitches(v=>v.filter(x=>x.id!==m.id))}>この曲を削除</button></div>)}</div>
 <label className="inlineOption"><input type="checkbox" checked={pauseBgmDuringVideo} onChange={e=>setPauseBgmDuringVideo(e.target.checked)}/> 動画の再生中はBGMを止める（写真に戻ると再開）</label>
 <label>BGM音量：{volume}%<input type="range" min="0" max="100" step="5" value={volume} onChange={e=>setVolume(Number(e.target.value))}/></label>
 {musicError?<p className="musicError" role="alert">{musicError}</p>:null}
@@ -324,7 +337,7 @@ return <main><header><div className="brand">✦ おもいでシアター</div><d
 {exportError?<p className="musicError" role="alert">{exportError}</p>:null}
 {exportResult?<div><p>動画ができました（{exportResult.name}）</p><video src={exportResult.url} controls playsInline style={{width:'100%',maxHeight:320,background:'#211629'}}/><div className="actions"><button onClick={shareMovie}>共有・保存する</button><a className="downloadLink" href={exportResult.url} download={exportResult.name}>ファイルをダウンロード</a></div><p className="note">共有メニューから「ビデオを保存」が選べる場合は写真アプリに保存できます。対応形式は端末によって異なります。</p></div>:null}
 </section><div className="editPageActions"><button onClick={()=>setEditPage('ending')}>← エンディング</button></div></>:null}<button className="secondary" onClick={()=>setStep('home')}>ホームに戻る</button></section>:null}
-<input ref={musicInput} type="file" accept="audio/*,.mp3,.m4a,.wav,.aac" hidden onChange={e=>{importMusic(e.target.files);e.target.value=''}}/>
+<input ref={switchInput} type="file" accept="audio/*,.mp3,.m4a,.wav,.aac" hidden onChange={e=>{void addMusicSwitch(e.target.files);e.target.value=''}}/><input ref={musicInput} type="file" accept="audio/*,.mp3,.m4a,.wav,.aac" hidden onChange={e=>{importMusic(e.target.files);e.target.value=''}}/>
 <input ref={input} type="file" accept="image/*" multiple hidden onChange={e=>{void addPhotos(e.target.files);e.target.value=''}}/><input ref={videoInput} type="file" accept="video/*,.mov,.mp4,.m4v" multiple hidden onChange={e=>{void addPhotos(e.target.files);e.target.value=''}}/>
-<footer>おもいでシアター · 試作版 v3.8</footer></main>
+<footer>おもいでシアター · 試作版 v3.9</footer></main>
 }
