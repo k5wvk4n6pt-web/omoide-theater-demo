@@ -3,8 +3,9 @@ export type ExportOptions={photos:ExportPhoto[];durations:number[];title:string;
 const sleep=(ms:number)=>new Promise<void>(resolve=>setTimeout(resolve,ms));
 function loadImage(url:string){return new Promise<HTMLImageElement>((resolve,reject)=>{const img=new Image();img.onload=()=>resolve(img);img.onerror=()=>reject(new Error('写真を読み込めませんでした'));img.src=url})}
 function drawImage(ctx:CanvasRenderingContext2D,img:HTMLImageElement|HTMLVideoElement,w:number,h:number,scale:number,shift:number,offsetY=0){const iw=img instanceof HTMLVideoElement?img.videoWidth:img.naturalWidth,ih=img instanceof HTMLVideoElement?img.videoHeight:img.naturalHeight;if(!iw||!ih)return false;const ratio=Math.min(w/iw,h/ih);const dw=iw*ratio*scale,dh=ih*ratio*scale;ctx.drawImage(img,(w-dw)/2+shift,(h-dh)/2+offsetY,dw,dh);return true}
-function decorate(ctx:CanvasRenderingContext2D,w:number,h:number,frame:ExportOptions['frame']){
+function decorate(ctx:CanvasRenderingContext2D,w:number,h:number,frame:ExportOptions['frame'],frameImages:Record<string,HTMLImageElement>={}){
  if(frame==='none')return;
+ if(frameImages[frame]){ctx.drawImage(frameImages[frame],0,0,w,h);return;}
  ctx.save();ctx.lineWidth=Math.max(8,w*.018);ctx.strokeStyle=frame==='gold'?'#d5aa52':frame==='green'?'#7abf81':frame==='film'?'#302a31':frame==='snow'?'#c8eafa':frame==='sunflower'?'#f5c844':frame==='sakura'?'#f7cfdf':'#f4d1e5';
  ctx.strokeRect(10,10,w-20,h-20);
  ctx.font=Math.round(w*.065)+'px sans-serif';ctx.textBaseline='top';ctx.fillStyle='#fff';
