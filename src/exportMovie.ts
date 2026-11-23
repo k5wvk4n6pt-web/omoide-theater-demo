@@ -2,7 +2,7 @@ export type ExportPhoto={subtitles?:{id:string;text:string;start:number;end:numb
 export type ExportOptions={photos:ExportPhoto[];durations:number[];title:string;ending:string;frame:string;background:string;decoration:string;sticker:string;curtainColor:string;theme:string;aspect:'wide'|'vertical';bgm:'none'|'gentle'|'bright'|'file';audioUrl?:string;volume:number;onProgress:(p:number)=>void};
 const sleep=(ms:number)=>new Promise<void>(resolve=>setTimeout(resolve,ms));
 function loadImage(url:string){return new Promise<HTMLImageElement>((resolve,reject)=>{const img=new Image();img.onload=()=>resolve(img);img.onerror=()=>reject(new Error('写真を読み込めませんでした'));img.src=url})}
-function drawImage(ctx:CanvasRenderingContext2D,img:HTMLImageElement,w:number,h:number,scale:number,shift:number,offsetY=0){const ratio=Math.min(w/img.width,h/img.height);const dw=img.width*ratio*scale,dh=img.height*ratio*scale;ctx.drawImage(img,(w-dw)/2+shift,(h-dh)/2+offsetY,dw,dh)}
+function drawImage(ctx:CanvasRenderingContext2D,img:HTMLImageElement|HTMLVideoElement,w:number,h:number,scale:number,shift:number,offsetY=0){const iw=img instanceof HTMLVideoElement?img.videoWidth:img.naturalWidth,ih=img instanceof HTMLVideoElement?img.videoHeight:img.naturalHeight;if(!iw||!ih)return false;const ratio=Math.min(w/iw,h/ih);const dw=iw*ratio*scale,dh=ih*ratio*scale;ctx.drawImage(img,(w-dw)/2+shift,(h-dh)/2+offsetY,dw,dh);return true}
 function decorate(ctx:CanvasRenderingContext2D,w:number,h:number,frame:ExportOptions['frame']){
  if(frame==='none')return;
  ctx.save();ctx.lineWidth=Math.max(8,w*.018);ctx.strokeStyle=frame==='gold'?'#d5aa52':frame==='green'?'#7abf81':frame==='film'?'#302a31':frame==='snow'?'#c8eafa':frame==='sunflower'?'#f5c844':frame==='sakura'?'#f7cfdf':'#f4d1e5';
@@ -54,7 +54,7 @@ export async function exportMovie(o:ExportOptions):Promise<{blob:Blob;extension:
   }
   const chunks:BlobPart[]=[];const recorder=new MediaRecorder(stream,{mimeType:mime,videoBitsPerSecond:2500000});
   const result=new Promise<Blob>((resolve,reject)=>{recorder.ondataavailable=e=>{if(e.data.size)chunks.push(e.data)};recorder.onerror=()=>reject(Error('動画の記録中にエラーが発生しました'));recorder.onstop=()=>resolve(new Blob(chunks,{type:mime.split(';')[0]}))});
-  const total=12+o.durations.reduce((a,b)=>a+b,0);const start=performance.now();recorder.start(1000);
+  let renderedVideoFrames=0;const total=12+o.durations.reduce((a,b)=>a+b,0);const start=performance.now();recorder.start(1000);
   while(true){
    const elapsed=Math.min((performance.now()-start)/1000,total);const w=canvas.width,h=canvas.height;
    const colors:Record<string,[string,string]>={sky:['#6ab9f4','#eaf8ff'],sakura:['#f5b8d0','#fff2f6'],stars:['#0e1238','#50418b'],sunset:['#f68e8d','#f9c57a'],sparkle:['#b89250','#fff2c4'],rainbow:['#94d4f4','#ffdce9']};const palette=colors[o.background];if(palette){const gradient=ctx.createLinearGradient(0,0,0,h);gradient.addColorStop(0,palette[0]);gradient.addColorStop(1,palette[1]);ctx.fillStyle=gradient}else ctx.fillStyle=o.theme==='sakura'?'#e8b8cb':o.theme==='album'?'#75604d':'#1c1425';ctx.fillRect(0,0,w,h);
@@ -69,7 +69,7 @@ export async function exportMovie(o:ExportOptions):Promise<{blob:Blob;extension:
  if(photo.kind==='video'){
   const v=videos[index];if(v){
    if(lastVideoIndex!==index){videos.forEach((item,j)=>{if(item&&j!==index)item.pause()});lastVideoIndex=index;v.currentTime=photo.trimStart??0;void v.play().catch(()=>{})}
-   if(v.readyState>=2)drawImage(ctx,v as unknown as HTMLImageElement,w,h,photo.zoom??1,(photo.offsetX??0)/100*w,(photo.offsetY??0)/100*h);
+   if(v.readyState>=2&&drawImage(ctx,v,w,h,photo.zoom??1,(photo.offsetX??0)/100*w,(photo.offsetY??0)/100*h))renderedVideoFrames++;
   }
  }else if(imgs[index])drawImage(ctx,imgs[index]!,w,h,scale*(photo.zoom??1),shift+(photo.offsetX??0)/100*w,(photo.offsetY??0)/100*h);ctx.restore();decorate(ctx,w,h,photo.frame??o.frame);drawExtras(ctx,w,h,{...o,decoration:photo.decoration??o.decoration,sticker:photo.sticker??o.sticker},t);if(photo.caption){ctx.save();const font=photo.captionFont==='cursive'?'Yomogi, cursive':photo.captionFont??'sans-serif';const px=(photo.captionSize??22)*(w/350);const x=w*(photo.captionX??50)/100,y=h*(photo.captionY??83)/100;const motion=photo.captionMotion??'none';const progress=Math.max(0,Math.min(1,t/.85));if(motion==='fade')ctx.globalAlpha=progress;if(motion==='rise')ctx.translate(0,(1-progress)*h*.10);if(motion==='slide')ctx.translate(-(1-progress)*w*.35,0);ctx.font=(photo.captionWeight??700)+' '+Math.round(px)+'px '+font;ctx.textAlign='center';ctx.textBaseline='middle';const maxWidth=w*.88;const measured=Math.min(ctx.measureText(photo.caption).width,maxWidth);if(photo.captionBackground){ctx.fillStyle='rgba(0,0,0,.58)';ctx.fillRect(x-measured/2-14,y-px*.75,measured+28,px*1.5)}ctx.fillStyle=photo.captionColor??'#ffffff';if(photo.captionOutline){ctx.lineWidth=Math.max(1.5,px*.045)+((photo.captionWeight??700)>=900?3.2:(photo.captionWeight??700)>=700?1.6:0)*w/350;ctx.lineJoin='round';ctx.strokeStyle=photo.captionOutlineColor??'#222222';ctx.strokeText(photo.caption,x,y,maxWidth)}ctx.shadowBlur=0;const extra=(photo.captionWeight??700)>=900?1.35:(photo.captionWeight??700)>=700?.65:0;if(extra){ctx.lineWidth=Math.max(.5,extra*w/350);ctx.strokeStyle=photo.captionColor??'#ffffff';ctx.lineJoin='round';ctx.strokeText(photo.caption,x,y,maxWidth)}ctx.fillText(photo.caption,x,y,maxWidth);ctx.restore()}
    const cue=photo.subtitles?.find(c=>t>=c.start&&t<c.end);
@@ -79,6 +79,6 @@ export async function exportMovie(o:ExportOptions):Promise<{blob:Blob;extension:
    if(elapsed>=total)break;
    await sleep(1000/24);
   }
-  await sleep(250);recorder.stop();const blob=await result;if(!blob.size)throw Error('動画ファイルが空でした');o.onProgress(100);return {blob,extension:mime.includes('mp4')?'mp4':'webm'};
+  await sleep(250);recorder.stop();const blob=await result;if(o.photos.some(p=>p.kind==='video')&&renderedVideoFrames===0)throw Error('動画の映像を取得できませんでした。黒い画面の動画を保存しないため、書き出しを中止しました。');if(!blob.size)throw Error('動画ファイルが空でした');o.onProgress(100);return {blob,extension:mime.includes('mp4')?'mp4':'webm'};
  }finally{if(typeof videos!=='undefined')videos.forEach(v=>v?.pause());if(interval!==undefined)clearInterval(interval);if(audio)audio.pause();if(ac)void ac.close();stream.getTracks().forEach(track=>track.stop())}
 }
