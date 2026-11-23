@@ -79,22 +79,54 @@ const input=useRef<HTMLInputElement>(null);
 const videoInput=useRef<HTMLInputElement>(null);
 const previewVideo=useRef<HTMLVideoElement|null>(null);
 const dragRef=useRef<{x:number;y:number;startX:number;startY:number;kind:'photo'|'caption';width:number;height:number}|null>(null);
+const touchesRef=useRef<Map<number,{x:number;y:number}>>(new Map());
+const pinchRef=useRef<{distance:number;zoom:number}|null>(null);
+const gestureStartRef=useRef<Photo[]|null>(null);
 function beginDrag(e:React.PointerEvent<HTMLElement>,kind:'photo'|'caption'){
  if(playing||!current)return;
  e.preventDefault();e.stopPropagation();
  const rect=e.currentTarget.closest('.previewFrame')?.getBoundingClientRect();
  if(!rect)return;
- dragRef.current={x:e.clientX,y:e.clientY,startX:kind==='photo'?(current.offsetX??0):(current.captionX??50),startY:kind==='photo'?(current.offsetY??0):(current.captionY??83),kind,width:rect.width,height:rect.height};
+ if(!gestureStartRef.current)gestureStartRef.current=photos;
+ touchesRef.current.set(e.pointerId,{x:e.clientX,y:e.clientY});
+ if(touchesRef.current.size===1){
+  dragRef.current={x:e.clientX,y:e.clientY,startX:kind==='photo'?(current.offsetX??0):(current.captionX??50),startY:kind==='photo'?(current.offsetY??0):(current.captionY??83),kind,width:rect.width,height:rect.height};
+ }else if(kind==='photo'&&touchesRef.current.size===2){
+  const [a,b]=Array.from(touchesRef.current.values());
+  pinchRef.current={distance:Math.hypot(a.x-b.x,a.y-b.y),zoom:current.zoom??1};
+  dragRef.current=null;
+ }
  e.currentTarget.setPointerCapture(e.pointerId);
 }
 function moveDrag(e:React.PointerEvent<HTMLElement>){
- const d=dragRef.current;if(!d||!current)return;
- const dx=(e.clientX-d.x)/d.width*100,dy=(e.clientY-d.y)/d.height*100;
+ if(!touchesRef.current.has(e.pointerId)||!current)return;
+ touchesRef.current.set(e.pointerId,{x:e.clientX,y:e.clientY});
  const clamp=(n:number,min:number,max:number)=>Math.min(max,Math.max(min,n));
- if(d.kind==='photo')setPhotos(p=>p.map((x,i)=>i===selected?{...x,offsetX:clamp(d.startX+dx,-40,40),offsetY:clamp(d.startY+dy,-40,40)}:x));
+ if(touchesRef.current.size===2&&pinchRef.current){
+  const [a,b]=Array.from(touchesRef.current.values());
+  const distance=Math.hypot(a.x-b.x,a.y-b.y);
+  const zoom=clamp(pinchRef.current.zoom*distance/Math.max(1,pinchRef.current.distance),1,3);
+  setPhotos(p=>p.map((x,i)=>i===selected?{...x,zoom}:x));
+  return;
+ }
+ const d=dragRef.current;if(!d)return;
+ const dx=(e.clientX-d.x)/d.width*100,dy=(e.clientY-d.y)/d.height*100;
+ if(d.kind==='photo')setPhotos(p=>p.map((x,i)=>i===selected?{...x,offsetX:clamp(d.startX+dx,-60,60),offsetY:clamp(d.startY+dy,-60,60)}:x));
  else setPhotos(p=>p.map((x,i)=>i===selected?{...x,captionX:clamp(d.startX+dx,5,95),captionY:clamp(d.startY+dy,8,92)}:x));
 }
-function endDrag(){const d=dragRef.current;if(!d)return;dragRef.current=null;setUndoStack(stack=>[...stack.slice(-19),photos.map((p,i)=>i===selected?{...p,...(d.kind==='photo'?{offsetX:d.startX,offsetY:d.startY}:{captionX:d.startX,captionY:d.startY})}:p)]);setRedoStack([])}
+function endDrag(e?:React.PointerEvent<HTMLElement>){
+ if(e)touchesRef.current.delete(e.pointerId);
+ if(touchesRef.current.size===1){
+  pinchRef.current=null;
+  const remaining=Array.from(touchesRef.current.values())[0];
+  const rect=e?.currentTarget.closest('.previewFrame')?.getBoundingClientRect();
+  if(rect&&current)dragRef.current={x:remaining.x,y:remaining.y,startX:current.offsetX??0,startY:current.offsetY??0,kind:'photo',width:rect.width,height:rect.height};
+  return;
+ }
+ if(touchesRef.current.size>0)return;
+ dragRef.current=null;pinchRef.current=null;
+ if(gestureStartRef.current){setUndoStack(stack=>[...stack.slice(-19),gestureStartRef.current!]);setRedoStack([]);gestureStartRef.current=null}
+}
 
 const musicInput=useRef<HTMLInputElement>(null);
 const audioRef=useRef<HTMLAudioElement|null>(null);
@@ -300,7 +332,7 @@ return <main><header><div className="brand">✦ おもいでシアター</div><d
 {editTool==='sticker'?<label>この写真のスタンプ<select value={current.sticker??sticker} onChange={e=>update(selected,{sticker:e.target.value})}><option value="none">なし</option>{Object.entries(symbols).map(([key,value])=><option key={key} value={key}>{value} {key}</option>)}</select></label>:null}
 {editTool==='transition'?<label>切り替え<select value={current.effect} onChange={e=>update(selected,{effect:e.target.value as Photo['effect']})}><option value="zoom">ゆっくりズーム</option><option value="fade">フェード</option><option value="slide">スライド</option><option value="page">ページめくり</option><option value="heart">ハート</option><option value="curtain">カーテン</option></select></label>:null}
 {editTool==='duration'?(current.kind==='video'?<div className="videoTrim"><p>動画のカット編集</p><label>開始位置：{current.trimStart??0}秒<input type="range" min="0" max={Math.max(0,(current.sourceDuration??current.duration)-1)} step="1" value={current.trimStart??0} onChange={e=>{const start=Number(e.target.value);update(selected,{trimStart:start,duration:Math.min(current.duration,Math.max(1,(current.sourceDuration??current.duration)-start))})}}/></label><label>使用する長さ：{current.duration}秒<input type="range" min="1" max={Math.max(1,(current.sourceDuration??current.duration)-(current.trimStart??0))} value={current.duration} onChange={e=>update(selected,{duration:Number(e.target.value)})}/></label><label><input type="checkbox" checked={current.keepAudio??true} onChange={e=>update(selected,{keepAudio:e.target.checked})}/> 動画の元音声を残す</label><small>カット編集は元動画を変更せず、書き出し時に指定範囲だけ使用します。</small></div>:<label>表示時間：{current.duration}秒<input type="range" min="2" max="15" value={current.duration} onChange={e=>update(selected,{duration:Number(e.target.value)})}/>{mode==='music'?<small>音楽の長さ基準では個別の秒数は反映されません</small>:null}</label>):null}
-{editTool==='position'?<><p className="note">プレビューの写真を指で動かせます。下のスライダーでも調整できます。</p><label>拡大：{Math.round((current.zoom??1)*100)}%<input type="range" min="1" max="1.8" step=".05" value={current.zoom??1} onChange={e=>update(selected,{zoom:Number(e.target.value)})}/></label><label>左右位置<input type="range" min="-40" max="40" value={current.offsetX??0} onChange={e=>update(selected,{offsetX:Number(e.target.value)})}/></label><label>上下位置<input type="range" min="-40" max="40" value={current.offsetY??0} onChange={e=>update(selected,{offsetY:Number(e.target.value)})}/></label></>:null}
+{editTool==='position'?<><p className="note">プレビューを1本指で移動、2本指で拡大・縮小できます。フレームは動きません。</p><label>拡大：{Math.round((current.zoom??1)*100)}%<input type="range" min="1" max="3" step=".05" value={current.zoom??1} onChange={e=>update(selected,{zoom:Number(e.target.value)})}/></label><label>左右位置<input type="range" min="-60" max="60" value={current.offsetX??0} onChange={e=>update(selected,{offsetX:Number(e.target.value)})}/></label><label>上下位置<input type="range" min="-60" max="60" value={current.offsetY??0} onChange={e=>update(selected,{offsetY:Number(e.target.value)})}/></label><button type="button" onClick={()=>update(selected,{zoom:1,offsetX:0,offsetY:0})}>位置と拡大率をリセット</button></>:null}
 {editTool==='apply'?<><p className="note">選択中の写真の設定を全写真にコピーします。</p><button onClick={applyAll}>全写真に適用する</button></>:null}
 </div>:null}
 <div className="actions"><button disabled={!undoStack.length} onClick={undo}>↶ 取り消し</button><button disabled={!redoStack.length} onClick={redo}>↷ やり直し</button></div>
@@ -342,5 +374,5 @@ return <main><header><div className="brand">✦ おもいでシアター</div><d
 </section><div className="editPageActions"><button onClick={()=>setEditPage('ending')}>← エンディング</button></div></>:null}<button className="secondary" onClick={()=>setStep('home')}>ホームに戻る</button></section>:null}
 <input ref={switchInput} type="file" accept="audio/*,.mp3,.m4a,.wav,.aac" hidden onChange={e=>{void addMusicSwitch(e.target.files);e.target.value=''}}/><input ref={musicInput} type="file" accept="audio/*,.mp3,.m4a,.wav,.aac" hidden onChange={e=>{importMusic(e.target.files);e.target.value=''}}/>
 <input ref={input} type="file" accept="image/*" multiple hidden onChange={e=>{void addPhotos(e.target.files);e.target.value=''}}/><input ref={videoInput} type="file" accept="video/*,.mov,.mp4,.m4v" multiple hidden onChange={e=>{void addPhotos(e.target.files);e.target.value=''}}/>
-<footer>おもいでシアター · 試作版 v5.2</footer></main>
+<footer>おもいでシアター · 試作版 v5.3</footer></main>
 }
