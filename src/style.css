@@ -137,3 +137,18 @@ input[type="file"][hidden]{display:none!important}
 .openingPhotoParticles.sakuraPetalParticles span:nth-child(3n){width:8px;height:12px;opacity:.5;animation-duration:7.4s}
 .openingPhotoParticles.sakuraPetalParticles span:nth-child(4n){width:13px;height:18px;animation-duration:4.7s}
 @keyframes sakuraPetalDrift{0%{transform:translate3d(-26px,-70px,0) rotate(-35deg) rotateY(0deg);opacity:0}12%{opacity:.8}50%{transform:translate3d(23px,65px,0) rotate(110deg) rotateY(75deg);opacity:.9}88%{opacity:.7}100%{transform:translate3d(-13px,170px,0) rotate(270deg) rotateY(180deg);opacity:0}}
+
+/* v4.7 transparent illustrated frames, preserve existing per-photo/global frame settings */
+.photoDecoration.sakura,.photoDecoration.green,.photoDecoration.gold,.photoDecoration.polaroid,.photoDecoration.film,.photoDecoration.album,.photoDecoration.balloon,.photoDecoration.soft,.photoDecoration.snow,.photoDecoration.sunflower,.photoDecoration.theater,.photoDecoration.rainbow{border:0!important;inset:0!important;padding:0!important;background-position:center;background-size:100% 100%;background-repeat:no-repeat}
+.photoDecoration.sakura{background-image:url('/omoide-theater-demo/frames/sakura.svg')}
+.photoDecoration.green{background-image:url('/omoide-theater-demo/frames/green.svg')}
+.photoDecoration.gold{background-image:url('/omoide-theater-demo/frames/gold.svg')}
+.photoDecoration.polaroid{background-image:url('/omoide-theater-demo/frames/polaroid.svg')}
+.photoDecoration.film{background-image:url('/omoide-theater-demo/frames/film.svg')}
+.photoDecoration.album{background-image:url('/omoide-theater-demo/frames/album.svg')}
+.photoDecoration.balloon{background-image:url('/omoide-theater-demo/frames/balloon.svg')}
+.photoDecoration.soft{background-image:url('/omoide-theater-demo/frames/soft.svg')}
+.photoDecoration.snow{background-image:url('/omoide-theater-demo/frames/snow.svg')}
+.photoDecoration.sunflower{background-image:url('/omoide-theater-demo/frames/sunflower.svg')}
+.photoDecoration.theater{background-image:url('/omoide-theater-demo/frames/theater.svg')}
+.photoDecoration.rainbow{background-image:url('/omoide-theater-demo/frames/rainbow.svg')}
