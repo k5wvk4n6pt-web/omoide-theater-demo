@@ -44,6 +44,7 @@ function drawOpening(ctx:CanvasRenderingContext2D,o:ExportOptions,w:number,h:num
  }else{ctx.fillStyle='#2a2435';ctx.globalAlpha=Math.max(0,1-t/5);ctx.fillRect(0,0,w,h)}
  ctx.restore();
  if(kind!=='countdown'||t>=4.5){ctx.save();ctx.globalAlpha=kind==='fade'?Math.min(1,t/2):kind==='album'?Math.min(1,t/2):kind==='countdown'?Math.min(1,(t-4.5)*2):1;text(ctx,o.title,w,h,w>h?44:40);ctx.restore()}
+ if(kind==='album'&&t<2.3){const open=Math.max(0,Math.min(1,(t-.35)/1.95));const widthFactor=Math.max(0,Math.cos(open*Math.PI*.53));ctx.save();ctx.fillStyle='#986b50';ctx.fillRect(w*.08,h*.12,w*.84*widthFactor,h*.76);ctx.restore()}
 }
 export async function exportMovie(o:ExportOptions):Promise<{blob:Blob;extension:string}>{
  const canvas=document.createElement('canvas');const wide=o.aspect==='wide';canvas.width=wide?960:540;canvas.height=wide?540:960;
