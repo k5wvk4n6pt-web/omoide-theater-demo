@@ -65,3 +65,5 @@
 .videoThumb>video{display:block;width:100%;height:100%;object-fit:cover;background:#30273e;pointer-events:none}.videoThumb>img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 
 .timedSubtitle{position:absolute;left:5%;right:5%;bottom:9%;z-index:8;text-align:center;font-weight:800;white-space:pre-wrap;overflow-wrap:anywhere;pointer-events:none;line-height:1.35}.subtitleEditor{display:grid;gap:12px}.subtitleCue{padding:12px;border:1px solid #d8cfdb;border-radius:12px;background:#fff}.subtitleTimes{display:grid;grid-template-columns:1fr 1fr;gap:10px}.subtitleTimes input{width:100%;box-sizing:border-box}
+
+.editSteps{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:14px 0 20px}.editSteps button{padding:12px 6px;border-radius:12px;border:1px solid #e1d5e4;background:#fff;color:#5d4c65;font-size:13px;font-weight:700}.editSteps button.active{background:#694577;color:#fff;border-color:#694577}.editPageActions{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:22px 0}.editPageActions button{flex:1;min-width:120px}
