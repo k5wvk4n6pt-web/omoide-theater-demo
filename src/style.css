@@ -121,3 +121,13 @@ input[type="file"][hidden]{display:none!important}
 /* v4.5: smooth, GPU-composited album sheet turn with a continuous hinge motion. */
 .previewFrame .albumFullPageTurn{animation:albumFullSheetTurnSmooth 1.8s cubic-bezier(.45,.05,.55,.95) both!important;will-change:transform,opacity;transform-origin:0% 50%;backface-visibility:hidden;contain:paint;box-shadow:inset -12px 0 24px rgba(50,30,20,.16),5px 3px 12px rgba(35,22,20,.18)}
 @keyframes albumFullSheetTurnSmooth{0%{transform:perspective(1400px) rotateY(0deg);opacity:1}12%{transform:perspective(1400px) rotateY(-5deg);opacity:1}35%{transform:perspective(1400px) rotateY(-28deg);opacity:1}60%{transform:perspective(1400px) rotateY(-62deg);opacity:1}82%{transform:perspective(1400px) rotateY(-85deg);opacity:1}96%{transform:perspective(1400px) rotateY(-93deg);opacity:.85}100%{transform:perspective(1400px) rotateY(-96deg);opacity:0;visibility:hidden}}
+
+/* v4.6 six uploaded cinematic opening images; no cropping or stretching. */
+.openingOverlay:has(.openingPhotoBackground){background:#251d2a}
+.openingPhotoBackground{position:absolute;inset:0;background-size:contain;background-repeat:no-repeat;background-position:center;animation:openingPhotoFloat 6s ease-in-out both;filter:brightness(.78)}
+.openingOverlay:has(.openingPhotoBackground) .openingHeading{z-index:5;max-width:88%;padding:.28em .65em;border-radius:12px;background:rgba(24,16,32,.43);text-shadow:0 2px 12px #000;animation:openingAppear 1.3s .45s both}
+.openingPhotoParticles{position:absolute;inset:0;z-index:3;overflow:hidden;pointer-events:none}
+.openingPhotoParticles span{position:absolute;display:block;font-size:clamp(13px,3vw,29px);opacity:0;filter:drop-shadow(0 1px 6px #fff8);animation:openingParticleFloat 4.8s ease-in-out infinite}
+@keyframes openingPhotoFloat{from{transform:scale(1.025);opacity:.55}to{transform:scale(1);opacity:1}}
+@keyframes openingParticleFloat{0%{transform:translate3d(0,22px,0) scale(.65);opacity:0}20%{opacity:.85}70%{opacity:.7}100%{transform:translate3d(18px,-35px,0) scale(1.12);opacity:0}}
+.openingOverlay:has(.openingPhotoBackground) .openingOrnaments{display:none}
