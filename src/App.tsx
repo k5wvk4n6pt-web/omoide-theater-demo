@@ -62,7 +62,7 @@ const [editPage,setEditPage]=useState<'opening'|'main'|'ending'|'finish'>('openi
 const [editTool,setEditTool]=useState<'frame'|'text'|'decor'|'sticker'|'transition'|'duration'|'position'|'apply'|'subtitles'|null>(null);
 const [undoStack,setUndoStack]=useState<Photo[][]>([]);
 const [redoStack,setRedoStack]=useState<Photo[][]>([]);
-const frameChoices=[['none','なし'],['sakura','🌸 さくら'],['green','🌿 グリーン'],['gold','✨ エレガント'],['polaroid','📷 ポラロイド'],['film','🎞️ フィルム'],['album','📒 アルバム'],['balloon','🎈 バルーン'],['soft','💗 ハート'],['snow','❄️ 雪'],['sunflower','🌻 ひまわり'],['theater','🎭 シアター'],['rainbow','🌈 にじと雲']];
+const frameChoices=[['none','なし'],['sakura','🌸 さくら'],['green','🌿 グリーン'],['gold','✨ エレガント'],['polaroid','📷 ポラロイド'],['film','🎞️ フィルム'],['album','📒 アルバム'],['balloon','🎈 バルーン'],['soft','💗 ハート'],['snow','❄️ 雪'],['sunflower','🌻 ひまわり'],['theater','🎭 シアター'],['rainbow','🌈 にじと雲'],['simple_white','シンプル（ホワイト）'],['simple_beige','シンプル（ベージュ）'],['simple_gray','シンプル（グレー）'],['simple_black','シンプル（ブラック）'],['photo_corner','フォトコーナー'],['hand_pink','手書き風（ピンク）'],['hand_blue','手書き風（ブルー）'],['washi','和紙風'],['film_simple','フィルム（シンプル）'],['fine_gold','細ライン（ゴールド）'],['fine_silver','細ライン（シルバー）'],['watercolor','水彩（淡い）']];
 const decorChoices=[['none','なし'],['petals','🌸 花びら'],['glitter','✨ キラキラ'],['bubbles','🫧 シャボン玉'],['hearts','💗 ハート'],['fireworks','🎆 花火'],['snow','❄️ 雪'],['confetti','🎉 紙吹雪'],['light','✦ 光の粒']];
 const [mode,setMode]=useState<'photo'|'music'>('photo');
 const [musicSeconds,setMusicSeconds]=useState(180);
@@ -340,5 +340,5 @@ return <main><header><div className="brand">✦ おもいでシアター</div><d
 </section><div className="editPageActions"><button onClick={()=>setEditPage('ending')}>← エンディング</button></div></>:null}<button className="secondary" onClick={()=>setStep('home')}>ホームに戻る</button></section>:null}
 <input ref={switchInput} type="file" accept="audio/*,.mp3,.m4a,.wav,.aac" hidden onChange={e=>{void addMusicSwitch(e.target.files);e.target.value=''}}/><input ref={musicInput} type="file" accept="audio/*,.mp3,.m4a,.wav,.aac" hidden onChange={e=>{importMusic(e.target.files);e.target.value=''}}/>
 <input ref={input} type="file" accept="image/*" multiple hidden onChange={e=>{void addPhotos(e.target.files);e.target.value=''}}/><input ref={videoInput} type="file" accept="video/*,.mov,.mp4,.m4v" multiple hidden onChange={e=>{void addPhotos(e.target.files);e.target.value=''}}/>
-<footer>おもいでシアター · 試作版 v4.7</footer></main>
+<footer>おもいでシアター · 試作版 v4.8</footer></main>
 }
