@@ -69,7 +69,7 @@ const decorChoices=[['none','なし'],['petals','🌸 花びら'],['glitter','�
 const [mode,setMode]=useState<'photo'|'music'>('photo');
 const [musicSeconds,setMusicSeconds]=useState(180);
 const [duration,setDuration]=useState(5);
-const [aspect,setAspect]=useState<'wide'|'vertical'>('wide');
+const [aspect,setAspect]=useState<'wide'|'vertical'|'square'>('wide');
 const [playing,setPlaying]=useState(false);
 const [playIndex,setPlayIndex]=useState(0);
 const [phase,setPhase]=useState<'intro'|'photos'|'outro'>('intro');
@@ -342,7 +342,7 @@ return <main><header><div className="brand">✦ おもいでシアター</div><d
 <label>オープニング演出<select value={opening} onChange={e=>setOpening(e.target.value as typeof opening)}><option value="curtain">🎭 カーテン</option><option value="sparkle">✨ キラキラ登場</option><option value="sakura">🌸 桜の舞</option><option value="album">📖 アルバムが開く</option><option value="countdown">🎞️ 映画カウントダウン</option><option value="rainbow">🌈 虹と雲</option><option value="fade">✧ シンプルフェード</option><optgroup label="✨ 写真背景のオープニング"><option value="gold_light">✨ ゴールドの光</option><option value="floral_wedding">💐 フラワーウェディング</option><option value="sakura_tunnel">🌸 桜のトンネル</option><option value="balloon_party">🎈 バルーンパーティー</option><option value="starry_story">🌙 星空の物語</option><option value="retro_cinema">🎞️ レトロ映画</option></optgroup></select></label>
 {opening==='curtain'?<label>カーテンの色<select value={curtainColor} onChange={e=>setCurtainColor(e.target.value as typeof curtainColor)}><option value="red">クラシック（赤）</option><option value="pink">パステル（ピンク）</option><option value="navy">ナイト（紺）</option><option value="gold">ゴールド</option></select></label>:null}
 {opening==='album'?<p className="note">📖 アルバム風では、本編の写真・動画もページをめくるように切り替わります。</p>:null}
-<label>オープニングタイトル<input value={title} onChange={e=>setTitle(e.target.value)}/></label><label>動画の向き<select value={aspect} onChange={e=>setAspect(e.target.value as typeof aspect)}><option value="wide">横型（16:9）</option><option value="vertical">縦型（9:16）</option></select></label><p className="note">オープニング演出とタイトルを選びます。タイトルは本編中には表示しません。</p></section><div className="editPageActions"><button className="primary" onClick={()=>setEditPage('main')}>次へ：本編 →</button></div></>:null}{editPage==='ending'?<><section className="designBox"><h3>🌷 エンディング作成</h3>
+<label>オープニングタイトル<input value={title} onChange={e=>setTitle(e.target.value)}/></label><label>動画の向き<select value={aspect} onChange={e=>setAspect(e.target.value as typeof aspect)}><option value="wide">横型（16:9）</option><option value="vertical">縦型（9:16）</option><option value="square">正方形（1:1）</option></select></label><p className="note">オープニング演出とタイトルを選びます。タイトルは本編中には表示しません。</p></section><div className="editPageActions"><button className="primary" onClick={()=>setEditPage('main')}>次へ：本編 →</button></div></>:null}{editPage==='ending'?<><section className="designBox"><h3>🌷 エンディング作成</h3>
 <label>背景<select value={background} onChange={e=>setBackground(e.target.value as typeof background)}><option value="default">テーマ標準</option><option value="sky">青空</option><option value="sakura">さくら</option><option value="stars">星空</option><option value="sunset">夕焼け</option><option value="sparkle">キラキラ</option><option value="rainbow">虹と雲</option></select></label>
 <label>写真フレーム<select value={frame} onChange={e=>setFrame(e.target.value as typeof frame)}>
 <option value="none">フレームなし</option><option value="sakura">さくら</option><option value="green">グリーン</option><option value="gold">エレガント</option><option value="polaroid">ポラロイド</option><option value="film">フィルム</option><option value="album">アルバム風</option><option value="balloon">バルーン</option><option value="soft">ハート</option><option value="snow">雪</option><option value="sunflower">ひまわり</option></select></label>
@@ -374,5 +374,5 @@ return <main><header><div className="brand">✦ おもいでシアター</div><d
 </section><div className="editPageActions"><button onClick={()=>setEditPage('ending')}>← エンディング</button></div></>:null}<button className="secondary" onClick={()=>setStep('home')}>ホームに戻る</button></section>:null}
 <input ref={switchInput} type="file" accept="audio/*,.mp3,.m4a,.wav,.aac" hidden onChange={e=>{void addMusicSwitch(e.target.files);e.target.value=''}}/><input ref={musicInput} type="file" accept="audio/*,.mp3,.m4a,.wav,.aac" hidden onChange={e=>{importMusic(e.target.files);e.target.value=''}}/>
 <input ref={input} type="file" accept="image/*" multiple hidden onChange={e=>{void addPhotos(e.target.files);e.target.value=''}}/><input ref={videoInput} type="file" accept="video/*,.mov,.mp4,.m4v" multiple hidden onChange={e=>{void addPhotos(e.target.files);e.target.value=''}}/>
-<footer>おもいでシアター · 試作版 v5.6</footer></main>
+<footer>おもいでシアター · 試作版 v5.7</footer></main>
 }
