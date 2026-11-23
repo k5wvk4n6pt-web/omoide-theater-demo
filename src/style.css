@@ -131,3 +131,9 @@ input[type="file"][hidden]{display:none!important}
 @keyframes openingPhotoFloat{from{transform:scale(1.025);opacity:.55}to{transform:scale(1);opacity:1}}
 @keyframes openingParticleFloat{0%{transform:translate3d(0,22px,0) scale(.65);opacity:0}20%{opacity:.85}70%{opacity:.7}100%{transform:translate3d(18px,-35px,0) scale(1.12);opacity:0}}
 .openingOverlay:has(.openingPhotoBackground) .openingOrnaments{display:none}
+
+/* Cherry-blossom tunnel: small translucent petals drift down and sideways. */
+.openingPhotoParticles.sakuraPetalParticles span{width:clamp(6px,1.2vw,15px);height:clamp(9px,1.8vw,21px);font-size:0;background:linear-gradient(140deg,#fff3f7 0%,#f6a8c8 78%,#e78eaf 100%);border-radius:80% 5% 70% 35%;box-shadow:0 0 6px rgba(255,216,233,.65);transform-origin:50% 80%;animation:sakuraPetalDrift 5.7s linear infinite;filter:none}
+.openingPhotoParticles.sakuraPetalParticles span:nth-child(3n){width:8px;height:12px;opacity:.5;animation-duration:7.4s}
+.openingPhotoParticles.sakuraPetalParticles span:nth-child(4n){width:13px;height:18px;animation-duration:4.7s}
+@keyframes sakuraPetalDrift{0%{transform:translate3d(-26px,-70px,0) rotate(-35deg) rotateY(0deg);opacity:0}12%{opacity:.8}50%{transform:translate3d(23px,65px,0) rotate(110deg) rotateY(75deg);opacity:.9}88%{opacity:.7}100%{transform:translate3d(-13px,170px,0) rotate(270deg) rotateY(180deg);opacity:0}}
