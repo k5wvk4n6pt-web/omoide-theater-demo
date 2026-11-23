@@ -190,3 +190,6 @@ input[type="file"][hidden]{display:none!important}
 .photoDecoration.fine_gold{background-image:url('/omoide-theater-demo/fine_gold.png')!important}
 .photoDecoration.fine_silver{background-image:url('/omoide-theater-demo/fine_silver.png')!important}
 .photoDecoration.watercolor{background-image:url('/omoide-theater-demo/watercolor.png')!important}
+/* v5.0 frame scope controls and consistent 16:9 photo frame layout */
+.frameScopePanel{display:grid;gap:12px}.frameScopeButtons{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.frameScopeButtons button{font-size:12px;padding:10px 4px;border-radius:10px}.frameScopeButtons button.chosen{background:#754c79;color:white}.frameTargetGrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;max-height:280px;overflow-y:auto}.frameTarget{display:flex;flex-direction:column;gap:4px;align-items:center;font-size:12px}.frameTarget img,.frameTarget video{width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:6px}.frameTarget input{align-self:flex-start}
+.photoDecoration{background-origin:border-box;background-clip:border-box}
