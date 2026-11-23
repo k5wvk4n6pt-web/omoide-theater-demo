@@ -49,6 +49,7 @@ export async function exportMovie(o:ExportOptions):Promise<{blob:Blob;extension:
    if(o.bgm==='file'&&o.audioUrl){audio=new Audio(o.audioUrl);audio.loop=true;const src=ac.createMediaElementSource(audio);src.connect(gain);await ac.resume();await audio.play()}
    else if(o.bgm!=='file'){await ac.resume();const notes=o.bgm==='gentle'?[261.63,329.63,392,523.25,392,329.63,293.66,349.23]:[392,493.88,587.33,783.99,659.25,587.33,493.88,523.25];let i=0;const play=()=>{if(!ac||ac.state==='closed')return;const oscillator=ac.createOscillator(),envelope=ac.createGain(),now=ac.currentTime;oscillator.type=o.bgm==='gentle'?'sine':'triangle';oscillator.frequency.value=notes[i++%notes.length];envelope.gain.setValueAtTime(.0001,now);envelope.gain.exponentialRampToValueAtTime(.10,now+.12);envelope.gain.exponentialRampToValueAtTime(.0001,now+1.1);oscillator.connect(envelope);envelope.connect(gain);oscillator.start(now);oscillator.stop(now+1.12)};play();interval=window.setInterval(play,o.bgm==='gentle'?1300:850)}
    }
+   await ac.resume();
    dest.stream.getAudioTracks().forEach(track=>stream.addTrack(track));
   }
   const chunks:BlobPart[]=[];const recorder=new MediaRecorder(stream,{mimeType:mime,videoBitsPerSecond:2500000});
