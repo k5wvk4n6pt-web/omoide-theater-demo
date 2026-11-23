@@ -180,7 +180,7 @@ function playMusic(){
   };note();synthTimer.current=window.setInterval(note,bgm==='gentle'?1300:850);setMusicPlaying(true);
  }catch{setMusicError('この端末ではBGMを再生できません')}
 }
-useEffect(()=>{const el=previewVideo.current;if(!el)return;if(playing&&phase==='photos'){el.currentTime=activePhoto?.kind==='video'?(activePhoto.trimStart??0):0;el.muted=!(activePhoto?.keepAudio??true);void el.play().catch(()=>{})}else{el.pause();el.currentTime=0}},[playing,phase,playIndex,sceneKey,activePhoto?.trimStart,activePhoto?.keepAudio]);
+useEffect(()=>{const el=previewVideo.current;if(!el)return;if(playing&&phase==='photos'){const clip=photos[playIndex];el.currentTime=clip?.kind==='video'?(clip.trimStart??0):0;el.muted=!(clip?.keepAudio??true);void el.play().catch(()=>{})}else{el.pause();el.currentTime=0}},[playing,phase,playIndex,sceneKey,photos]);
 function startPreview(){
  if(!photos.length)return;
  if(playing){setPlaying(false);setPhase('intro');stopMusic()}
