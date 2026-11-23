@@ -32,6 +32,8 @@ jobs:
         run: cp gold_light.png floral_wedding.png sakura_tunnel.png balloon_party.png starry_story.png retro_cinema.png dist/
       - name: Include transparent frame assets
         run: mkdir -p dist/frames && cp frames/*.svg dist/frames/
+      - name: Include original uploaded transparent PNG frames
+        run: cp album.png balloon.png film.png film_simple.png fine_gold.png fine_silver.png gold.png green.png hand_blue.png hand_pink.png photo_corner.png polaroid.png rainbow.png sakura.png simple_beige.png simple_black.png simple_gray.png simple_white.png snow.png soft.png sunflower.png theater.png washi.png watercolor.png dist/
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
