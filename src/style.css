@@ -213,3 +213,6 @@ input[type="file"][hidden]{display:none!important}
 .previewFrame .motionDecor,.previewFrame .previewSticker{z-index:3}
 .previewFrame .photoCaption,.previewFrame .timedSubtitle{z-index:4}
 .previewFrame .photoDecoration{z-index:10!important;pointer-events:none!important}
+
+/* v5.7 square format preview */
+.preview.square{aspect-ratio:1/1;max-width:min(100%,540px)}
