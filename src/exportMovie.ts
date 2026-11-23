@@ -57,7 +57,7 @@ export async function exportMovie(o:ExportOptions):Promise<{blob:Blob;extension:
  const openingImg=o.opening&&['gold_light','floral_wedding','sakura_tunnel','balloon_party','starry_story','retro_cinema'].includes(o.opening)?await loadImage('/omoide-theater-demo/'+o.opening+'.png'):null;
  const frameKeys=['sakura','green','gold','polaroid','film','album','balloon','soft','snow','sunflower','theater','rainbow','simple_white','simple_beige','simple_gray','simple_black','photo_corner','hand_pink','hand_blue','washi','film_simple','fine_gold','fine_silver','watercolor'];
  const frameImages:Record<string,HTMLImageElement>={};
- await Promise.all(frameKeys.map(async key=>{try{frameImages[key]=await loadImage('/omoide-theater-demo/frames/'+key+'.svg')}catch{/* keep existing fallback frame */}}));
+ await Promise.all(frameKeys.map(async key=>{try{frameImages[key]=await loadImage('/omoide-theater-demo/'+key+'.png')}catch{/* keep existing fallback frame */}}));
  const imgs=await Promise.all(o.photos.map(p=>p.kind==='video'?Promise.resolve(null):loadImage(p.url)));
  const videos=await Promise.all(o.photos.map(async p=>{
   if(p.kind!=='video')return null;
