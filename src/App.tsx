@@ -313,5 +313,5 @@ return <main><header><div className="brand">✦ おもいでシアター</div><d
 </section><button className="secondary" onClick={()=>setStep('home')}>ホームに戻る</button></section>:null}
 <input ref={musicInput} type="file" accept="audio/*,.mp3,.m4a,.wav,.aac" hidden onChange={e=>{importMusic(e.target.files);e.target.value=''}}/>
 <input ref={input} type="file" accept="image/*" multiple hidden onChange={e=>{void addPhotos(e.target.files);e.target.value=''}}/><input ref={videoInput} type="file" accept="video/*,.mov,.mp4,.m4v" multiple hidden onChange={e=>{void addPhotos(e.target.files);e.target.value=''}}/>
-<footer>おもいでシアター · 試作版 v2.7</footer></main>
+<footer>おもいでシアター · 試作版 v2.8</footer></main>
 }
