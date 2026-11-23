@@ -56,4 +56,4 @@
 /* Text fill and outline are separate layers so Safari never paints stroke over the fill. */
 .photoCaption{position:absolute;text-shadow:none!important;isolation:isolate}
 .photoCaption .captionOutlineLayer{position:absolute;inset:4px 10px;left:10px;top:4px;width:calc(100% - 20px);color:transparent;-webkit-text-fill-color:transparent;pointer-events:none;z-index:0;white-space:inherit}
-.photoCaption .captionFillLayer{position:relative;z-index:1;color:inherit;-webkit-text-stroke:0!important;text-shadow:none!important}
+.photoCaption .captionFillLayer{position:relative;z-index:1;color:inherit;text-shadow:none!important}
