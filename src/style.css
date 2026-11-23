@@ -59,3 +59,5 @@
 .photoCaption .captionFillLayer{position:relative;z-index:1;color:inherit;text-shadow:none!important}
 
 .scenePhoto video{width:100%;height:100%;object-fit:contain;display:block}.thumb video{width:100%;height:100%;object-fit:cover;pointer-events:none}
+
+.videoThumb{position:relative;width:100%;height:100%;overflow:hidden;background:#30273e}.videoThumb>img{width:100%;height:100%;object-fit:cover;display:block}.videoThumbFallback{height:100%;display:grid;place-items:center;font-size:24px;color:#fff}.videoThumbPlay{position:absolute!important;left:50%!important;top:50%!important;right:auto!important;bottom:auto!important;transform:translate(-50%,-50%);display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:rgba(0,0,0,.6)!important;color:#fff!important;font-size:14px!important;pointer-events:none}
