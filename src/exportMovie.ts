@@ -84,10 +84,10 @@ export async function exportMovie(o:ExportOptions):Promise<{blob:Blob;extension:
    if(elapsed<6){
     drawOpening(ctx,o,w,h,elapsed);
    }else if(elapsed>=total-6){text(ctx,'Fin.',w,h,wide?66:60);ctx.font='26px sans-serif';ctx.fillStyle='#f7e7d6';ctx.textAlign='center';ctx.fillText(o.ending||o.title,w/2,h*.64,w*.85)}
-   else{let t=elapsed-6,index=0;while(index<o.durations.length-1&&t>=o.durations[index]){t-=o.durations[index];index++}const d=o.durations[index]||5;const fraction=Math.min(1,t/d);const photo=o.photos[index];const scale=photo.effect==='zoom'?1+.13*fraction:photo.effect==='slide'?1.06:1;const shift=photo.effect==='slide'?(0.05-0.1*fraction)*w:0;ctx.save();ctx.globalAlpha=photo.effect==='fade'?Math.max(0,Math.min(1,t/.6,(d-t)/.6)):1;
- if(photo.effect==='page'){ctx.translate(w,0);ctx.scale(Math.max(.01,Math.min(1,t/.65)),1);ctx.translate(-w,0)}
- if(photo.effect==='heart'){const r=Math.max(.01,Math.min(1,t/.85));ctx.beginPath();const cx=w/2,cy=h/2;ctx.moveTo(cx,cy+h*.42*r);ctx.bezierCurveTo(cx-w*.9*r,cy-h*.12*r,cx-w*.45*r,cy-h*.62*r,cx,cy-h*.23*r);ctx.bezierCurveTo(cx+w*.45*r,cy-h*.62*r,cx+w*.9*r,cy-h*.12*r,cx,cy+h*.42*r);ctx.clip()}
- if(photo.effect==='curtain'){const progress=Math.max(0,Math.min(1,t/.8));ctx.beginPath();ctx.rect(w/2-w/2*progress,0,w*progress,h);ctx.clip()}
+   else{let t=elapsed-6,index=0;while(index<o.durations.length-1&&t>=o.durations[index]){t-=o.durations[index];index++}const d=o.durations[index]||5;const fraction=Math.min(1,t/d);const photo=o.photos[index];const effect=o.opening==='album'?'page':photo.effect;const scale=effect==='zoom'?1+.13*fraction:effect==='slide'?1.06:1;const shift=effect==='slide'?(0.05-0.1*fraction)*w:0;ctx.save();ctx.globalAlpha=effect==='fade'?Math.max(0,Math.min(1,t/.6,(d-t)/.6)):1;
+ if(effect==='page'){ctx.translate(w,0);ctx.scale(Math.max(.01,Math.min(1,t/.65)),1);ctx.translate(-w,0)}
+ if(effect==='heart'){const r=Math.max(.01,Math.min(1,t/.85));ctx.beginPath();const cx=w/2,cy=h/2;ctx.moveTo(cx,cy+h*.42*r);ctx.bezierCurveTo(cx-w*.9*r,cy-h*.12*r,cx-w*.45*r,cy-h*.62*r,cx,cy-h*.23*r);ctx.bezierCurveTo(cx+w*.45*r,cy-h*.62*r,cx+w*.9*r,cy-h*.12*r,cx,cy+h*.42*r);ctx.clip()}
+ if(effect==='curtain'){const progress=Math.max(0,Math.min(1,t/.8));ctx.beginPath();ctx.rect(w/2-w/2*progress,0,w*progress,h);ctx.clip()}
  if(photo.kind==='video'){
   const v=videos[index];if(v){
    if(lastVideoIndex!==index){videos.forEach((item,j)=>{if(item&&j!==index)item.pause()});lastVideoIndex=index;v.currentTime=photo.trimStart??0;void v.play().catch(()=>{})}
