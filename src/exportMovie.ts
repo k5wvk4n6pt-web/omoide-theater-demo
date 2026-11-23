@@ -53,7 +53,7 @@ export async function exportMovie(o:ExportOptions):Promise<{blob:Blob;extension:
  if(typeof canvas.captureStream!=='function'||typeof MediaRecorder==='undefined')throw Error('このiPhoneのブラウザは動画の書き出しに対応していません。iPhoneアプリ版での対応が必要です');
  const mime=['video/mp4;codecs=avc1.42E01E,mp4a.40.2','video/mp4','video/webm;codecs=vp8,opus','video/webm'].find(x=>MediaRecorder.isTypeSupported(x));
  if(!mime)throw Error('このブラウザで利用できる動画形式がありません');
- const openingImg=o.opening&&['gold_light','floral_wedding','sakura_tunnel','balloon_party','starry_story','retro_cinema'].includes(o.opening)?await loadImage(import.meta.env.BASE_URL+o.opening+'.png'):null;
+ const openingImg=o.opening&&['gold_light','floral_wedding','sakura_tunnel','balloon_party','starry_story','retro_cinema'].includes(o.opening)?await loadImage('/omoide-theater-demo/'+o.opening+'.png'):null;
  const imgs=await Promise.all(o.photos.map(p=>p.kind==='video'?Promise.resolve(null):loadImage(p.url)));
  const videos=await Promise.all(o.photos.map(async p=>{
   if(p.kind!=='video')return null;
