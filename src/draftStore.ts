@@ -21,7 +21,7 @@ export async function listProjects():Promise<ProjectSummary[]>{
   const p=await transaction<StoredProject|undefined>('readonly',store=>store.get(key));
   if(!p)return null;
   const item:ProjectSummary={id:String(key),title:String(p.settings.title||'無題の作品'),savedAt:p.savedAt,photoCount:p.photos.length};
-  if(p.photos[0]?.blob)item.thumbnail=p.photos[0].blob;
+  if(p.photos[0]?.blob&&p.photos[0].blob.type.startsWith('image/'))item.thumbnail=p.photos[0].blob;
   return item;
  }));
  const projects:ProjectSummary[]=[];
