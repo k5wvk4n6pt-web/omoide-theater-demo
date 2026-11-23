@@ -207,3 +207,9 @@ input[type="file"][hidden]{display:none!important}
 
 /* v5.5 theater: original composite has an opaque white lower mat. Keep only curtain top and side rails, never paint the bottom over a photo. */
 .photoDecoration.theater{-webkit-mask-image:linear-gradient(to bottom,#000 0%,#000 12%,transparent 18%,transparent 100%),linear-gradient(to right,#000 0%,#000 8%,transparent 15%,transparent 100%),linear-gradient(to left,#000 0%,#000 8%,transparent 15%,transparent 100%)!important;mask-image:linear-gradient(to bottom,#000 0%,#000 12%,transparent 18%,transparent 100%),linear-gradient(to right,#000 0%,#000 8%,transparent 15%,transparent 100%),linear-gradient(to left,#000 0%,#000 8%,transparent 15%,transparent 100%)!important;-webkit-mask-composite:source-over!important;mask-composite:add!important}
+
+/* v5.6: frame is always the frontmost visual layer; photo remains movable beneath it. */
+.previewFrame .scenePhoto{z-index:1;isolation:isolate}
+.previewFrame .motionDecor,.previewFrame .previewSticker{z-index:3}
+.previewFrame .photoCaption,.previewFrame .timedSubtitle{z-index:4}
+.previewFrame .photoDecoration{z-index:10!important;pointer-events:none!important}
