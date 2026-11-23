@@ -13,11 +13,24 @@ function VideoThumbnail({url,name}:{url:string;name:string}){
  useEffect(()=>{setPoster(null)},[url]);
  function capture(){
   const v=videoRef.current;if(!v||v.videoWidth===0||v.videoHeight===0)return;
-  try{const canvas=document.createElement('canvas');const ratio=Math.min(1,320/Math.max(v.videoWidth,v.videoHeight));canvas.width=Math.max(1,Math.round(v.videoWidth*ratio));canvas.height=Math.max(1,Math.round(v.videoHeight*ratio));const ctx=canvas.getContext('2d');if(!ctx)return;ctx.drawImage(v,0,0,canvas.width,canvas.height);setPoster(canvas.toDataURL('image/jpeg',.78))}catch{ /* Keep the video fallback if a thumbnail cannot be captured. */ }
+  try{
+   const canvas=document.createElement('canvas');
+   const ratio=Math.min(1,320/Math.max(v.videoWidth,v.videoHeight));
+   canvas.width=Math.max(1,Math.round(v.videoWidth*ratio));canvas.height=Math.max(1,Math.round(v.videoHeight*ratio));
+   const ctx=canvas.getContext('2d');if(!ctx)return;
+   ctx.drawImage(v,0,0,canvas.width,canvas.height);
+   const image=ctx.getImageData(0,0,Math.min(8,canvas.width),Math.min(8,canvas.height)).data;
+   if(!image.some((value,i)=>i%4!==3&&value>18))return;
+   setPoster(canvas.toDataURL('image/jpeg',.8));
+   v.pause();
+  }catch{ /* The visible video remains the fallback on iOS. */ }
+ }
+ function beginPreview(v:HTMLVideoElement){
+  if(poster)return;
+  void v.play().catch(()=>{ /* iOS may require a tap; the loaded video frame remains visible. */ });
  }
  return <div className="videoThumb">
-  {poster?<img src={poster} alt={name+'のサムネイル'}/>:<div className="videoThumbFallback">🎬</div>}
-  <video ref={videoRef} src={url} muted playsInline preload="auto" onLoadedData={e=>{const v=e.currentTarget;if(v.duration>.2){try{v.currentTime=Math.min(.3,v.duration/3)}catch{capture()}}else capture()}} onSeeked={capture} aria-hidden="true" style={{position:'absolute',width:1,height:1,opacity:0,pointerEvents:'none'}}/>
+  {poster?<img src={poster} alt={name+'のサムネイル'}/>:<video ref={videoRef} src={url} muted playsInline autoPlay loop preload="auto" onLoadedData={e=>beginPreview(e.currentTarget)} onTimeUpdate={e=>{if(e.currentTarget.currentTime>.12)capture()}} onPlaying={e=>{if(e.currentTarget.currentTime>.12)capture()}} aria-label={name+'の動画プレビュー'}/>}
   <span className="videoThumbPlay" aria-hidden="true">▶</span>
  </div>
 }
@@ -293,5 +306,5 @@ return <main><header><div className="brand">✦ おもいでシアター</div><d
 </section><button className="secondary" onClick={()=>setStep('home')}>ホームに戻る</button></section>:null}
 <input ref={musicInput} type="file" accept="audio/*,.mp3,.m4a,.wav,.aac" hidden onChange={e=>{importMusic(e.target.files);e.target.value=''}}/>
 <input ref={input} type="file" accept="image/*" multiple hidden onChange={e=>{void addPhotos(e.target.files);e.target.value=''}}/><input ref={videoInput} type="file" accept="video/*,.mov,.mp4,.m4v" multiple hidden onChange={e=>{void addPhotos(e.target.files);e.target.value=''}}/>
-<footer>おもいでシアター · 試作版 v2.2</footer></main>
+<footer>おもいでシアター · 試作版 v2.3</footer></main>
 }
