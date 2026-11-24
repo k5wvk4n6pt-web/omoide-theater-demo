@@ -245,3 +245,6 @@ input[type="file"][hidden]{display:none!important}
 /* v6.5: preserve entire source image during positioning; clip only at page aperture */
 .previewFrame .scenePhoto.albumPhotoInset img,.previewFrame .scenePhoto.albumPhotoInset video,.albumTurnPreviousPage>img{object-fit:contain!important}
 .previewFrame .albumCustomTitle span,.albumTurnTitlePage span{position:absolute!important;top:29%!important;left:50%!important;width:65%;max-width:65%;margin:0!important;transform:translate(-50%,-50%)!important;font-size:clamp(15px,3vw,34px);font-weight:700;color:#865b63;text-align:center;line-height:1.2}
+
+.albumTurnPreviousPage.withoutAlbumFrame:after{display:none!important;content:none!important}
+.albumTurnPreviousPage.withoutAlbumFrame>img{inset:0!important;width:100%!important;height:100%!important}
