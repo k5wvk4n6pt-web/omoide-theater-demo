@@ -232,3 +232,12 @@ input[type="file"][hidden]{display:none!important}
 .albumTurnPreviousPage{background:#fff3e5!important;position:relative;overflow:hidden}
 .albumTurnPreviousPage>img{position:absolute;inset:9% 7% 9% 11%;width:82%!important;height:82%!important;object-fit:contain!important}
 .albumTurnPreviousPage .photoDecoration{display:none!important}
+
+/* v6.4: keep outgoing page full-size and visible while turning */
+.previewFrame .scenePhoto.albumPhotoInset{inset:8% 7% 8% 10%}
+.previewFrame .scenePhoto.albumPhotoInset img,.previewFrame .scenePhoto.albumPhotoInset video{object-fit:cover}
+.previewFrame .albumFullPageTurn{animation:albumVisibleTurn 1.8s ease-in-out both!important;transform-style:flat;background:transparent;box-shadow:none}
+.albumTurnPreviousPage{position:absolute!important;inset:0!important;background:#251b2d!important}
+.albumTurnPreviousPage>img{inset:8% 7% 8% 10%;width:83%!important;height:84%!important;object-fit:cover!important}
+.albumTurnTitlePage{border:0!important;padding:0!important}
+@keyframes albumVisibleTurn{0%{transform:scaleX(1);opacity:1}85%{transform:scaleX(.08);opacity:1}100%{transform:scaleX(0);opacity:0}}
