@@ -36,6 +36,8 @@ jobs:
         run: cp album.png balloon.png film.png film_simple.png fine_gold.png fine_silver.png gold.png green.png hand_blue.png hand_pink.png photo_corner.png polaroid.png rainbow.png sakura.png simple_beige.png simple_black.png simple_gray.png simple_white.png snow.png soft.png sunflower.png theater.png washi.png watercolor.png dist/
       - name: Include album artwork when uploaded
         run: for f in AB7615CA-AEB7-4DD6-9C97-061B612CF4ED.png 5D7629A6-7CD4-4630-9F0B-41ED75881354.png; do if [ -f "$f" ]; then cp "$f" dist/; fi; done
+      - name: Include home artwork
+        run: for f in home_header.jpg home_hero.jpg home_create.jpg home_footer.jpg; do if [ -f "$f" ]; then cp "$f" dist/; fi; done
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
