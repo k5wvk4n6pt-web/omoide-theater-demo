@@ -258,3 +258,6 @@ input[type="file"][hidden]{display:none!important}
 .albumTurnPreviousPage.withAlbumFrame>img{inset:7% 5.5% 7% 9%!important;width:85.5%!important;height:86%!important}
 
 .albumTurnPhotoClip{position:absolute;inset:0;overflow:hidden;display:flex;align-items:center;justify-content:center}.albumTurnPreviousPage.withAlbumFrame .albumTurnPhotoClip{inset:7% 5.5% 7% 9%;clip-path:inset(0)}.albumTurnPhotoClip>img{width:100%;height:100%;object-fit:contain;display:block}
+
+/* v7.2 center title on album paper */
+.previewFrame .albumCustomTitle span,.albumTurnTitlePage span{top:50%!important;left:53%!important}
