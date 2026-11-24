@@ -225,3 +225,5 @@ input[type="file"][hidden]{display:none!important}
 .albumTurnTitlePage{background:url('/omoide-theater-demo/album_title.png') center/100% 100% no-repeat!important}
 .albumTurnPreviousPage:after{content:'';position:absolute;inset:0;background:url('/omoide-theater-demo/album_page.png') center/100% 100% no-repeat;pointer-events:none;z-index:5}
 .previewFrame .albumCustomTitle span{position:absolute;top:30%;left:53%;margin:0;transform:translate(-50%,-50%);width:65%}
+
+.previewFrame .scenePhoto.albumFrameLoading{visibility:hidden}
