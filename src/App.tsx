@@ -186,7 +186,7 @@ async function addPhotos(files:FileList|null){
  }));
  if(items.length){setPhotos(p=>[...p,...items]);setStep('edit')}
 }
-function remove(i:number){setPhotos(p=>{const item=p[i];return p.filter((_,j)=>j!==i)});setSelected(0)}
+function remove(i:number){setPhotos(p=>p.filter((_,j)=>j!==i));setSelected(0)}
 function move(i:number,offset:number){const to=i+offset;if(to<0||to>=photos.length)return;setPhotos(p=>{const next=[...p];[next[i],next[to]]=[next[to],next[i]];return next});setSelected(to)}
 function update(i:number,patch:Partial<Photo>){setPhotos(p=>{setUndoStack(stack=>[...stack.slice(-19),p]);setRedoStack([]);return p.map((v,j)=>j===i?{...v,...patch}:v)})}
 function undo(){if(!undoStack.length)return;setRedoStack(x=>[...x,photos]);setPhotos(undoStack[undoStack.length-1]);setUndoStack(x=>x.slice(0,-1))}
