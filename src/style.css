@@ -227,3 +227,8 @@ input[type="file"][hidden]{display:none!important}
 .previewFrame .albumCustomTitle span{position:absolute;top:30%;left:53%;margin:0;transform:translate(-50%,-50%);width:65%}
 
 .previewFrame .scenePhoto.albumFrameLoading{visibility:hidden}
+
+.previewFrame .scenePhoto.albumPhotoInset{inset:9% 7% 9% 11%;overflow:hidden}
+.albumTurnPreviousPage{background:#fff3e5!important;position:relative;overflow:hidden}
+.albumTurnPreviousPage>img{position:absolute;inset:9% 7% 9% 11%;width:82%!important;height:82%!important;object-fit:contain!important}
+.albumTurnPreviousPage .photoDecoration{display:none!important}
