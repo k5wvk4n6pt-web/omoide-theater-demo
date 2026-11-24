@@ -286,9 +286,8 @@ input[type="file"][hidden]{display:none!important}
 }
 .theaterEditor > header .homeArtwork {
   display: none;
-  width: min(100%, 390px);
+  width: 100%;
   height: auto;
-  margin: auto;
 }
 .theaterEditor > header .homeArtwork.loaded { display: block; }
 .theaterEditor > header:has(.homeArtwork.loaded) > :not(.homeArtwork) {
@@ -327,6 +326,3 @@ input[type="file"][hidden]{display:none!important}
 .theaterEditor .note,
 .theaterEditor footer { color: #775b67; }
 
-@media (max-width: 480px) {
-  .theaterEditor > header .homeArtwork { width: min(100%, 310px); }
-}
