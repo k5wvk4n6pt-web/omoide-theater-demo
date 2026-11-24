@@ -48,12 +48,26 @@ function drawOpening(ctx:CanvasRenderingContext2D,o:ExportOptions,w:number,h:num
  if(kind!=='countdown'||t>=4.5){ctx.save();ctx.globalAlpha=kind==='fade'?Math.min(1,t/2):kind==='album'?Math.min(1,t/2):kind==='countdown'?Math.min(1,(t-4.5)*2):1;text(ctx,o.title,w,h,w>h?44:40);ctx.restore()}
  if(kind==='album'&&t<2.3){const open=Math.max(0,Math.min(1,(t-.35)/1.95));const widthFactor=Math.max(0,Math.cos(open*Math.PI*.53));ctx.save();ctx.fillStyle='#986b50';ctx.fillRect(w*.08,h*.12,w*.84*widthFactor,h*.76);ctx.restore()}
 }
+function startMovieRecorder(stream: MediaStream): MediaRecorder {
+ const mp4 = ['video/mp4;codecs=avc1.42E01E,mp4a.40.2', 'video/mp4'];
+ const webm = ['video/webm;codecs=vp8,opus', 'video/webm;codecs=vp9,opus', 'video/webm'];
+ const formats = /Android/i.test(navigator.userAgent) ? [...webm, ...mp4] : [...mp4, ...webm];
+ for (const mimeType of formats) {
+  if (!MediaRecorder.isTypeSupported(mimeType)) continue;
+  try {
+   const recorder = new MediaRecorder(stream, {mimeType, videoBitsPerSecond: 2500000});
+   recorder.start(1000);
+   return recorder;
+  } catch {
+   // A browser can advertise a codec that cannot start on this device.
+  }
+ }
+ throw Error('このブラウザでは動画の記録を開始できませんでした。別のブラウザでお試しください。');
+}
 export async function exportMovie(o:ExportOptions):Promise<{blob:Blob;extension:string}>{
  const canvas=document.createElement('canvas');const wide=o.aspect==='wide';canvas.width=wide?960:540;canvas.height=wide?540:o.aspect==='square'?540:960;
  const ctx=canvas.getContext('2d');if(!ctx)throw Error('描画機能を利用できません');
- if(typeof canvas.captureStream!=='function'||typeof MediaRecorder==='undefined')throw Error('このiPhoneのブラウザは動画の書き出しに対応していません。iPhoneアプリ版での対応が必要です');
- const mime=['video/mp4;codecs=avc1.42E01E,mp4a.40.2','video/mp4','video/webm;codecs=vp8,opus','video/webm'].find(x=>MediaRecorder.isTypeSupported(x));
- if(!mime)throw Error('このブラウザで利用できる動画形式がありません');
+ if(typeof canvas.captureStream!=='function'||typeof MediaRecorder==='undefined')throw Error('このブラウザは動画の書き出しに対応していません。AndroidではChromeでお試しください。');
  const openingImg=o.opening&&['gold_light','floral_wedding','sakura_tunnel','balloon_party','starry_story','retro_cinema'].includes(o.opening)?await loadImage(import.meta.env.BASE_URL+o.opening+'.png'):null;
  const albumTitle=o.opening==='album'?await loadImage(import.meta.env.BASE_URL + 'AB7615CA-AEB7-4DD6-9C97-061B612CF4ED.png').catch(()=>null):null;
  const albumPage=(o.opening==='album'||o.photos.some(p=>p.frame==='album'))?await loadImage(import.meta.env.BASE_URL + '5D7629A6-7CD4-4630-9F0B-41ED75881354.png').catch(()=>null):null;
@@ -85,9 +99,10 @@ export async function exportMovie(o:ExportOptions):Promise<{blob:Blob;extension:
    await ac.resume();
    dest.stream.getAudioTracks().forEach(track=>stream.addTrack(track));
   }
-  const chunks:BlobPart[]=[];const recorder=new MediaRecorder(stream,{mimeType:mime,videoBitsPerSecond:2500000});
+  const chunks:BlobPart[]=[];const recorder=startMovieRecorder(stream);
+  const mime=recorder.mimeType;
   const result=new Promise<Blob>((resolve,reject)=>{recorder.ondataavailable=e=>{if(e.data.size)chunks.push(e.data)};recorder.onerror=()=>reject(Error('動画の記録中にエラーが発生しました'));recorder.onstop=()=>resolve(new Blob(chunks,{type:mime.split(';')[0]}))});
-  let renderedVideoFrames=0;const total=12+o.durations.reduce((a,b)=>a+b,0);const start=performance.now();recorder.start(1000);
+  let renderedVideoFrames=0;const total=12+o.durations.reduce((a,b)=>a+b,0);const start=performance.now();
   while(true){
    const elapsed=Math.min((performance.now()-start)/1000,total);const w=canvas.width,h=canvas.height;
    if(extraTracks.length){for(const track of extraTracks){if(elapsed>=track.start&&!track.started){track.started=true;void track.audio.play().catch(()=>{})}if(elapsed>=track.end&&track.started){track.audio.pause()}const inRange=elapsed>=track.start&&elapsed<track.end;const fadeIn=track.fade>0?Math.min(1,Math.max(0,(elapsed-track.start)/track.fade)):1;const fadeOut=Number.isFinite(track.end)&&track.fade>0?Math.min(1,Math.max(0,(track.end-elapsed)/track.fade)):1;const target=inRange?track.volume*Math.min(fadeIn,fadeOut):0;track.gain.gain.setTargetAtTime(target,ac!.currentTime,.025)}}

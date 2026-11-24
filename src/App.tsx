@@ -377,13 +377,18 @@ return <main className={step==='home'?'theaterHome':'theaterEditor'}><header><im
 {musicError?<p className="musicError" role="alert">{musicError}</p>:null}
 <p className="note">アプリ内の音は動作確認用の簡易音源です。正式なBGM曲は後から追加します。Apple Musicなど保護された配信曲は取り込めません。</p>
 </section><div className="editPageActions"><button onClick={()=>setEditPage('opening')}>← オープニング</button><button className="primary" onClick={()=>setEditPage('ending')}>次へ：エンディング →</button></div></>:null}{editPage==='finish'?<><h3>ムービーの長さ</h3><div className="mode"><label><input type="radio" checked={mode==='photo'} onChange={()=>setMode('photo')}/> 写真の表示時間を基準</label><label><input type="radio" checked={mode==='music'} onChange={()=>setMode('music')}/> 音楽の長さを基準</label></div>{mode==='photo'?<label>新しく追加する写真の初期表示時間：{duration}秒<input type="range" min="2" max="15" value={duration} onChange={e=>setDuration(Number(e.target.value))}/><button className="small" onClick={()=>setPhotos(p=>p.map(x=>({...x,duration})))}>全写真に適用</button></label>:<label>音楽の使用時間（秒）<input type="number" min="15" max="3600" value={musicSeconds} onChange={e=>setMusicSeconds(Math.max(15,Number(e.target.value)||15))}/></label>}<div className="summary">完成予定時間：約 {Math.floor(total/60)}分{Math.round(total%60)}秒（前後の演出各6秒を含む）</div><label>タイトル<input value={title} onChange={e=>setTitle(e.target.value)}/></label><section className="exportBox"><h3>🎬 動画を書き出す（試験機能）</h3>
-<p className="note">iPhoneのブラウザによっては動画の記録に対応していません。動画の元音声を残すか選べます。BGMと同時に流れる場合は音量にご注意ください。作成には動画の長さと同じ程度の時間がかかります。</p>
+<p className="note">動画の元音声を残すか選べます。BGMと同時に流れる場合は音量にご注意ください。作成には動画の長さと同じ程度の時間がかかります。</p>
 <button className="primary" disabled={exporting||!photos.length} onClick={makeMovie}>{exporting?'動画を作成中… '+exportProgress+'%':'動画を作成する'}</button>
 {exporting?<progress max="100" value={exportProgress} style={{width:'100%'}}/>:null}
 {exportError?<p className="musicError" role="alert">{exportError}</p>:null}
-{exportResult?<div><p>動画ができました（{exportResult.name}）</p><video src={exportResult.url} controls playsInline style={{width:'100%',maxHeight:320,background:'#211629'}}/><div className="actions"><button onClick={shareMovie}>共有・保存する</button><a className="downloadLink" href={exportResult.url} download={exportResult.name}>ファイルをダウンロード</a></div><p className="note">共有メニューから「ビデオを保存」が選べる場合は写真アプリに保存できます。対応形式は端末によって異なります。</p></div>:null}
+{exportResult?<div><p>動画ができました（{exportResult.name}）</p><video src={exportResult.url} controls playsInline style={{width:'100%',maxHeight:320,background:'#211629'}}/><div className="actions">
+<a className="downloadLink" href={exportResult.url} download={exportResult.name}>動画をダウンロード（{exportResult.name.split('.').pop()?.toUpperCase()}）</a>
+<button onClick={shareMovie}>共有・保存する</button>
+</div><p className="note">{/Android/i.test(navigator.userAgent)
+ ? 'ダウンロードした動画は、ブラウザの「ダウンロード」から開けます。'
+ : '共有メニューに「ビデオを保存」が表示される場合は、写真アプリにも保存できます。'}</p></div>:null}
 </section><div className="editPageActions"><button onClick={()=>setEditPage('ending')}>← エンディング</button></div></>:null}<button className="secondary" onClick={()=>setStep('home')}>ホームに戻る</button></section>:null}
 <input ref={switchInput} type="file" accept="audio/*,.mp3,.m4a,.wav,.aac" hidden onChange={e=>{void addMusicSwitch(e.target.files);e.target.value=''}}/><input ref={musicInput} type="file" accept="audio/*,.mp3,.m4a,.wav,.aac" hidden onChange={e=>{importMusic(e.target.files);e.target.value=''}}/>
 <input ref={input} type="file" accept="image/*" multiple hidden onChange={e=>{void addPhotos(e.target.files);e.target.value=''}}/><input ref={videoInput} type="file" accept="video/*,.mov,.mp4,.m4v" multiple hidden onChange={e=>{void addPhotos(e.target.files);e.target.value=''}}/>
-<footer>おもいでシアター · 試作版 v7.9</footer></main>
+<footer>おもいでシアター · 試作版 v8.0</footer></main>
 }
