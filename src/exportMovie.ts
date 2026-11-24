@@ -54,12 +54,12 @@ export async function exportMovie(o:ExportOptions):Promise<{blob:Blob;extension:
  if(typeof canvas.captureStream!=='function'||typeof MediaRecorder==='undefined')throw Error('このiPhoneのブラウザは動画の書き出しに対応していません。iPhoneアプリ版での対応が必要です');
  const mime=['video/mp4;codecs=avc1.42E01E,mp4a.40.2','video/mp4','video/webm;codecs=vp8,opus','video/webm'].find(x=>MediaRecorder.isTypeSupported(x));
  if(!mime)throw Error('このブラウザで利用できる動画形式がありません');
- const openingImg=o.opening&&['gold_light','floral_wedding','sakura_tunnel','balloon_party','starry_story','retro_cinema'].includes(o.opening)?await loadImage('/omoide-theater-demo/'+o.opening+'.png'):null;
- const albumTitle=o.opening==='album'?await loadImage('/omoide-theater-demo/AB7615CA-AEB7-4DD6-9C97-061B612CF4ED.png').catch(()=>null):null;
- const albumPage=(o.opening==='album'||o.photos.some(p=>p.frame==='album'))?await loadImage('/omoide-theater-demo/5D7629A6-7CD4-4630-9F0B-41ED75881354.png').catch(()=>null):null;
+ const openingImg=o.opening&&['gold_light','floral_wedding','sakura_tunnel','balloon_party','starry_story','retro_cinema'].includes(o.opening)?await loadImage(import.meta.env.BASE_URL+o.opening+'.png'):null;
+ const albumTitle=o.opening==='album'?await loadImage(import.meta.env.BASE_URL + 'AB7615CA-AEB7-4DD6-9C97-061B612CF4ED.png').catch(()=>null):null;
+ const albumPage=(o.opening==='album'||o.photos.some(p=>p.frame==='album'))?await loadImage(import.meta.env.BASE_URL + '5D7629A6-7CD4-4630-9F0B-41ED75881354.png').catch(()=>null):null;
  const frameKeys=['sakura','green','gold','polaroid','film','album','balloon','soft','snow','sunflower','theater','rainbow','simple_white','simple_beige','simple_gray','simple_black','photo_corner','hand_pink','hand_blue','washi','film_simple','fine_gold','fine_silver','watercolor'];
  const frameImages:Record<string,HTMLImageElement>={};
- await Promise.all(frameKeys.map(async key=>{try{frameImages[key]=await loadImage('/omoide-theater-demo/'+key+'.png')}catch{/* keep existing fallback frame */}}));
+ await Promise.all(frameKeys.map(async key=>{try{frameImages[key]=await loadImage(import.meta.env.BASE_URL+key+'.png')}catch{/* keep existing fallback frame */}}));
  const imgs=await Promise.all(o.photos.map(p=>p.kind==='video'?Promise.resolve(null):loadImage(p.url)));
  const videos=await Promise.all(o.photos.map(async p=>{
   if(p.kind!=='video')return null;

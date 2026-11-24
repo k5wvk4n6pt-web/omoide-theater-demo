@@ -140,56 +140,56 @@ input[type="file"][hidden]{display:none!important}
 
 /* v4.7 transparent illustrated frames, preserve existing per-photo/global frame settings */
 .photoDecoration.sakura,.photoDecoration.green,.photoDecoration.gold,.photoDecoration.polaroid,.photoDecoration.film,.photoDecoration.album,.photoDecoration.balloon,.photoDecoration.soft,.photoDecoration.snow,.photoDecoration.sunflower,.photoDecoration.theater,.photoDecoration.rainbow{border:0!important;inset:0!important;padding:0!important;background-position:center;background-size:100% 100%;background-repeat:no-repeat}
-.photoDecoration.sakura{background-image:url('/omoide-theater-demo/frames/sakura.svg')}
-.photoDecoration.green{background-image:url('/omoide-theater-demo/frames/green.svg')}
-.photoDecoration.gold{background-image:url('/omoide-theater-demo/frames/gold.svg')}
-.photoDecoration.polaroid{background-image:url('/omoide-theater-demo/frames/polaroid.svg')}
-.photoDecoration.film{background-image:url('/omoide-theater-demo/frames/film.svg')}
-.photoDecoration.album{background-image:url('/omoide-theater-demo/frames/album.svg')}
-.photoDecoration.balloon{background-image:url('/omoide-theater-demo/frames/balloon.svg')}
-.photoDecoration.soft{background-image:url('/omoide-theater-demo/frames/soft.svg')}
-.photoDecoration.snow{background-image:url('/omoide-theater-demo/frames/snow.svg')}
-.photoDecoration.sunflower{background-image:url('/omoide-theater-demo/frames/sunflower.svg')}
-.photoDecoration.theater{background-image:url('/omoide-theater-demo/frames/theater.svg')}
-.photoDecoration.rainbow{background-image:url('/omoide-theater-demo/frames/rainbow.svg')}
+.photoDecoration.sakura{background-image:url('../frames/sakura.svg')}
+.photoDecoration.green{background-image:url('../frames/green.svg')}
+.photoDecoration.gold{background-image:url('../frames/gold.svg')}
+.photoDecoration.polaroid{background-image:url('../frames/polaroid.svg')}
+.photoDecoration.film{background-image:url('../frames/film.svg')}
+.photoDecoration.album{background-image:url('../frames/album.svg')}
+.photoDecoration.balloon{background-image:url('../frames/balloon.svg')}
+.photoDecoration.soft{background-image:url('../frames/soft.svg')}
+.photoDecoration.snow{background-image:url('../frames/snow.svg')}
+.photoDecoration.sunflower{background-image:url('../frames/sunflower.svg')}
+.photoDecoration.theater{background-image:url('../frames/theater.svg')}
+.photoDecoration.rainbow{background-image:url('../frames/rainbow.svg')}
 /* v4.8 minimalist, photo-first transparent frame collection */
-.photoDecoration.simple_white{border:0!important;inset:0!important;padding:0!important;background:url('/omoide-theater-demo/frames/simple_white.svg') center/100% 100% no-repeat}
-.photoDecoration.simple_beige{border:0!important;inset:0!important;padding:0!important;background:url('/omoide-theater-demo/frames/simple_beige.svg') center/100% 100% no-repeat}
-.photoDecoration.simple_gray{border:0!important;inset:0!important;padding:0!important;background:url('/omoide-theater-demo/frames/simple_gray.svg') center/100% 100% no-repeat}
-.photoDecoration.simple_black{border:0!important;inset:0!important;padding:0!important;background:url('/omoide-theater-demo/frames/simple_black.svg') center/100% 100% no-repeat}
-.photoDecoration.photo_corner{border:0!important;inset:0!important;padding:0!important;background:url('/omoide-theater-demo/frames/photo_corner.svg') center/100% 100% no-repeat}
-.photoDecoration.hand_pink{border:0!important;inset:0!important;padding:0!important;background:url('/omoide-theater-demo/frames/hand_pink.svg') center/100% 100% no-repeat}
-.photoDecoration.hand_blue{border:0!important;inset:0!important;padding:0!important;background:url('/omoide-theater-demo/frames/hand_blue.svg') center/100% 100% no-repeat}
-.photoDecoration.washi{border:0!important;inset:0!important;padding:0!important;background:url('/omoide-theater-demo/frames/washi.svg') center/100% 100% no-repeat}
-.photoDecoration.film_simple{border:0!important;inset:0!important;padding:0!important;background:url('/omoide-theater-demo/frames/film_simple.svg') center/100% 100% no-repeat}
-.photoDecoration.fine_gold{border:0!important;inset:0!important;padding:0!important;background:url('/omoide-theater-demo/frames/fine_gold.svg') center/100% 100% no-repeat}
-.photoDecoration.fine_silver{border:0!important;inset:0!important;padding:0!important;background:url('/omoide-theater-demo/frames/fine_silver.svg') center/100% 100% no-repeat}
-.photoDecoration.watercolor{border:0!important;inset:0!important;padding:0!important;background:url('/omoide-theater-demo/frames/watercolor.svg') center/100% 100% no-repeat}
+.photoDecoration.simple_white{border:0!important;inset:0!important;padding:0!important;background:url('../frames/simple_white.svg') center/100% 100% no-repeat}
+.photoDecoration.simple_beige{border:0!important;inset:0!important;padding:0!important;background:url('../frames/simple_beige.svg') center/100% 100% no-repeat}
+.photoDecoration.simple_gray{border:0!important;inset:0!important;padding:0!important;background:url('../frames/simple_gray.svg') center/100% 100% no-repeat}
+.photoDecoration.simple_black{border:0!important;inset:0!important;padding:0!important;background:url('../frames/simple_black.svg') center/100% 100% no-repeat}
+.photoDecoration.photo_corner{border:0!important;inset:0!important;padding:0!important;background:url('../frames/photo_corner.svg') center/100% 100% no-repeat}
+.photoDecoration.hand_pink{border:0!important;inset:0!important;padding:0!important;background:url('../frames/hand_pink.svg') center/100% 100% no-repeat}
+.photoDecoration.hand_blue{border:0!important;inset:0!important;padding:0!important;background:url('../frames/hand_blue.svg') center/100% 100% no-repeat}
+.photoDecoration.washi{border:0!important;inset:0!important;padding:0!important;background:url('../frames/washi.svg') center/100% 100% no-repeat}
+.photoDecoration.film_simple{border:0!important;inset:0!important;padding:0!important;background:url('../frames/film_simple.svg') center/100% 100% no-repeat}
+.photoDecoration.fine_gold{border:0!important;inset:0!important;padding:0!important;background:url('../frames/fine_gold.svg') center/100% 100% no-repeat}
+.photoDecoration.fine_silver{border:0!important;inset:0!important;padding:0!important;background:url('../frames/fine_silver.svg') center/100% 100% no-repeat}
+.photoDecoration.watercolor{border:0!important;inset:0!important;padding:0!important;background:url('../frames/watercolor.svg') center/100% 100% no-repeat}
 /* v4.9 original user-supplied frame artwork takes precedence over previous SVG drafts */
-.photoDecoration.sakura{background-image:url('/omoide-theater-demo/sakura.png')!important}
-.photoDecoration.green{background-image:url('/omoide-theater-demo/green.png')!important}
-.photoDecoration.gold{background-image:url('/omoide-theater-demo/gold.png')!important}
-.photoDecoration.polaroid{background-image:url('/omoide-theater-demo/polaroid.png')!important}
-.photoDecoration.film{background-image:url('/omoide-theater-demo/film.png')!important}
-.photoDecoration.album{background-image:url('/omoide-theater-demo/album.png')!important}
-.photoDecoration.balloon{background-image:url('/omoide-theater-demo/balloon.png')!important}
-.photoDecoration.soft{background-image:url('/omoide-theater-demo/soft.png')!important}
-.photoDecoration.snow{background-image:url('/omoide-theater-demo/snow.png')!important}
-.photoDecoration.sunflower{background-image:url('/omoide-theater-demo/sunflower.png')!important}
-.photoDecoration.theater{background-image:url('/omoide-theater-demo/theater.png')!important}
-.photoDecoration.rainbow{background-image:url('/omoide-theater-demo/rainbow.png')!important}
-.photoDecoration.simple_white{background-image:url('/omoide-theater-demo/simple_white.png')!important}
-.photoDecoration.simple_beige{background-image:url('/omoide-theater-demo/simple_beige.png')!important}
-.photoDecoration.simple_gray{background-image:url('/omoide-theater-demo/simple_gray.png')!important}
-.photoDecoration.simple_black{background-image:url('/omoide-theater-demo/simple_black.png')!important}
-.photoDecoration.photo_corner{background-image:url('/omoide-theater-demo/photo_corner.png')!important}
-.photoDecoration.hand_pink{background-image:url('/omoide-theater-demo/hand_pink.png')!important}
-.photoDecoration.hand_blue{background-image:url('/omoide-theater-demo/hand_blue.png')!important}
-.photoDecoration.washi{background-image:url('/omoide-theater-demo/washi.png')!important}
-.photoDecoration.film_simple{background-image:url('/omoide-theater-demo/film_simple.png')!important}
-.photoDecoration.fine_gold{background-image:url('/omoide-theater-demo/fine_gold.png')!important}
-.photoDecoration.fine_silver{background-image:url('/omoide-theater-demo/fine_silver.png')!important}
-.photoDecoration.watercolor{background-image:url('/omoide-theater-demo/watercolor.png')!important}
+.photoDecoration.sakura{background-image:url('../sakura.png')!important}
+.photoDecoration.green{background-image:url('../green.png')!important}
+.photoDecoration.gold{background-image:url('../gold.png')!important}
+.photoDecoration.polaroid{background-image:url('../polaroid.png')!important}
+.photoDecoration.film{background-image:url('../film.png')!important}
+.photoDecoration.album{background-image:url('../album.png')!important}
+.photoDecoration.balloon{background-image:url('../balloon.png')!important}
+.photoDecoration.soft{background-image:url('../soft.png')!important}
+.photoDecoration.snow{background-image:url('../snow.png')!important}
+.photoDecoration.sunflower{background-image:url('../sunflower.png')!important}
+.photoDecoration.theater{background-image:url('../theater.png')!important}
+.photoDecoration.rainbow{background-image:url('../rainbow.png')!important}
+.photoDecoration.simple_white{background-image:url('../simple_white.png')!important}
+.photoDecoration.simple_beige{background-image:url('../simple_beige.png')!important}
+.photoDecoration.simple_gray{background-image:url('../simple_gray.png')!important}
+.photoDecoration.simple_black{background-image:url('../simple_black.png')!important}
+.photoDecoration.photo_corner{background-image:url('../photo_corner.png')!important}
+.photoDecoration.hand_pink{background-image:url('../hand_pink.png')!important}
+.photoDecoration.hand_blue{background-image:url('../hand_blue.png')!important}
+.photoDecoration.washi{background-image:url('../washi.png')!important}
+.photoDecoration.film_simple{background-image:url('../film_simple.png')!important}
+.photoDecoration.fine_gold{background-image:url('../fine_gold.png')!important}
+.photoDecoration.fine_silver{background-image:url('../fine_silver.png')!important}
+.photoDecoration.watercolor{background-image:url('../watercolor.png')!important}
 /* v5.0 frame scope controls and consistent 16:9 photo frame layout */
 .frameScopePanel{display:grid;gap:12px}.frameScopeButtons{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.frameScopeButtons button{font-size:12px;padding:10px 4px;border-radius:10px}.frameScopeButtons button.chosen{background:#754c79;color:white}.frameTargetGrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;max-height:280px;overflow-y:auto}.frameTarget{display:flex;flex-direction:column;gap:4px;align-items:center;font-size:12px}.frameTarget img,.frameTarget video{width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:6px}.frameTarget input{align-self:flex-start}
 .photoDecoration{background-origin:border-box;background-clip:border-box}
@@ -218,12 +218,12 @@ input[type="file"][hidden]{display:none!important}
 .preview.square{aspect-ratio:1/1;max-width:min(100%,540px)}
 
 /* v5.9 album-specific assets: these are not the general photo-frame feature. */
-.previewFrame .albumCustomTitle{position:absolute;inset:0;z-index:12;background:url('/omoide-theater-demo/AB7615CA-AEB7-4DD6-9C97-061B612CF4ED.png') center/100% 100% no-repeat;display:flex;align-items:center;justify-content:center;pointer-events:none}
+.previewFrame .albumCustomTitle{position:absolute;inset:0;z-index:12;background:url('../AB7615CA-AEB7-4DD6-9C97-061B612CF4ED.png') center/100% 100% no-repeat;display:flex;align-items:center;justify-content:center;pointer-events:none}
 .previewFrame .albumCustomTitle span{position:relative;max-width:65%;margin-left:5%;font-size:clamp(15px,3vw,34px);font-weight:700;color:#865b63;text-align:center;text-shadow:0 1px 2px #fff}
-.previewFrame .albumCustomPage{position:absolute;inset:0;z-index:10;background:url('/omoide-theater-demo/5D7629A6-7CD4-4630-9F0B-41ED75881354.png') center/100% 100% no-repeat;pointer-events:none}
+.previewFrame .albumCustomPage{position:absolute;inset:0;z-index:10;background:url('../5D7629A6-7CD4-4630-9F0B-41ED75881354.png') center/100% 100% no-repeat;pointer-events:none}
 
-.albumTurnTitlePage{background:url('/omoide-theater-demo/AB7615CA-AEB7-4DD6-9C97-061B612CF4ED.png') center/100% 100% no-repeat!important}
-.albumTurnPreviousPage:after{content:'';position:absolute;inset:0;background:url('/omoide-theater-demo/5D7629A6-7CD4-4630-9F0B-41ED75881354.png') center/100% 100% no-repeat;pointer-events:none;z-index:5}
+.albumTurnTitlePage{background:url('../AB7615CA-AEB7-4DD6-9C97-061B612CF4ED.png') center/100% 100% no-repeat!important}
+.albumTurnPreviousPage:after{content:'';position:absolute;inset:0;background:url('../5D7629A6-7CD4-4630-9F0B-41ED75881354.png') center/100% 100% no-repeat;pointer-events:none;z-index:5}
 .previewFrame .albumCustomTitle span{position:absolute;top:30%;left:53%;margin:0;transform:translate(-50%,-50%);width:65%}
 
 .previewFrame .scenePhoto.albumFrameLoading{visibility:hidden}
