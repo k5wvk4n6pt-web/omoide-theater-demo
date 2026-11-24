@@ -220,10 +220,10 @@ input[type="file"][hidden]{display:none!important}
 /* v5.9 album-specific assets: these are not the general photo-frame feature. */
 .previewFrame .albumCustomTitle{position:absolute;inset:0;z-index:12;background:url('../AB7615CA-AEB7-4DD6-9C97-061B612CF4ED.png') center/100% 100% no-repeat;display:flex;align-items:center;justify-content:center;pointer-events:none}
 .previewFrame .albumCustomTitle span{position:relative;max-width:65%;margin-left:5%;font-size:clamp(15px,3vw,34px);font-weight:700;color:#865b63;text-align:center;text-shadow:0 1px 2px #fff}
-.previewFrame .albumCustomPage{position:absolute;inset:0;z-index:10;background:url('../5D7629A6-7CD4-4630-9F0B-41ED75881354.png') center/100% 100% no-repeat;pointer-events:none}
+.previewFrame .albumCustomPage{position:absolute;inset:0;z-index:10;background:url('../album_page.png') center/100% 100% no-repeat;pointer-events:none}
 
 .albumTurnTitlePage{background:url('../AB7615CA-AEB7-4DD6-9C97-061B612CF4ED.png') center/100% 100% no-repeat!important}
-.albumTurnPreviousPage:after{content:'';position:absolute;inset:0;background:url('../5D7629A6-7CD4-4630-9F0B-41ED75881354.png') center/100% 100% no-repeat;pointer-events:none;z-index:5}
+.albumTurnPreviousPage:after{content:'';position:absolute;inset:0;background:url('../album_page.png') center/100% 100% no-repeat;pointer-events:none;z-index:5}
 .previewFrame .albumCustomTitle span{position:absolute;top:30%;left:53%;margin:0;transform:translate(-50%,-50%);width:65%}
 
 .previewFrame .scenePhoto.albumFrameLoading{visibility:hidden}

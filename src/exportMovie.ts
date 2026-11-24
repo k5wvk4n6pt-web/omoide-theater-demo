@@ -70,7 +70,7 @@ export async function exportMovie(o:ExportOptions):Promise<{blob:Blob;extension:
  if(typeof canvas.captureStream!=='function'||typeof MediaRecorder==='undefined')throw Error('このブラウザは動画の書き出しに対応していません。AndroidではChromeでお試しください。');
  const openingImg=o.opening&&['gold_light','floral_wedding','sakura_tunnel','balloon_party','starry_story','retro_cinema'].includes(o.opening)?await loadImage(import.meta.env.BASE_URL+o.opening+'.png'):null;
  const albumTitle=o.opening==='album'?await loadImage(import.meta.env.BASE_URL + 'AB7615CA-AEB7-4DD6-9C97-061B612CF4ED.png').catch(()=>null):null;
- const albumPage=(o.opening==='album'||o.photos.some(p=>p.frame==='album'))?await loadImage(import.meta.env.BASE_URL + '5D7629A6-7CD4-4630-9F0B-41ED75881354.png').catch(()=>null):null;
+ const albumPage=(o.opening==='album'||o.photos.some(p=>p.frame==='album'))?await loadImage(new URL('../album_page.png', import.meta.url).href).catch(()=>null):null;
  const frameKeys=['sakura','green','gold','polaroid','film','album','balloon','soft','snow','sunflower','theater','rainbow','simple_white','simple_beige','simple_gray','simple_black','photo_corner','hand_pink','hand_blue','washi','film_simple','fine_gold','fine_silver','watercolor'];
  const frameImages:Record<string,HTMLImageElement>={};
  await Promise.all(frameKeys.map(async key=>{try{frameImages[key]=await loadImage(import.meta.env.BASE_URL+key+'.png')}catch{/* keep existing fallback frame */}}));
