@@ -47,7 +47,7 @@ const thumbRef=useRef<Record<string,string>>({});
 async function refreshProjects(){const list=await listProjects();setProjects(list);Object.values(thumbRef.current).forEach(url=>URL.revokeObjectURL(url));const urls:Record<string,string>={};list.forEach(p=>{if(p.thumbnail)urls[p.id]=URL.createObjectURL(p.thumbnail)});thumbRef.current=urls;setThumbUrls(urls)}
 
 const [theme,setTheme]=useState<Theme>('theater');
-const [title,setTitle]=useState('大切な思い出');
+const [title,setTitle]=useState('');
 const [ending,setEnding]=useState('ありがとう、たくさんの思い出');
 const [frame,setFrame]=useState<'none'|'sakura'|'gold'|'soft'|'green'|'film'|'balloon'|'snow'|'sunflower'|'polaroid'|'album'>('none');
 const [background,setBackground]=useState<'default'|'sky'|'sakura'|'stars'|'sunset'|'sparkle'|'rainbow'>('default');
@@ -284,7 +284,7 @@ async function eraseProject(targetId:string){
 async function copyProject(targetId:string){
  try{await duplicateProject(targetId,id());await refreshProjects();setDraftInfo('作品を複製しました')}catch{setDraftInfo('複製できませんでした')}
 }
-function newProject(){setPlaying(false);stopMusic();setPhotos([]);setProjectId(null);setSelected(0);setUndoStack([]);setRedoStack([]);setAudioFile(null);setMusicSwitches([]);setTitle('大切な思い出');setEnding('ありがとう、たくさんの思い出');setEditPage('opening');setStep('edit');setDraftInfo('')}
+function newProject(){setPlaying(false);stopMusic();setPhotos([]);setProjectId(null);setSelected(0);setUndoStack([]);setRedoStack([]);setAudioFile(null);setMusicSwitches([]);setTitle('');setEnding('ありがとう、たくさんの思い出');setEditPage('opening');setStep('edit');setDraftInfo('')}
 
 async function makeMovie(){
  if(!photos.length||exporting)return;
@@ -385,5 +385,5 @@ return <main className={step==='home'?'theaterHome':'theaterEditor'}><header><im
 </section><div className="editPageActions"><button onClick={()=>setEditPage('ending')}>← エンディング</button></div></>:null}<button className="secondary" onClick={()=>setStep('home')}>ホームに戻る</button></section>:null}
 <input ref={switchInput} type="file" accept="audio/*,.mp3,.m4a,.wav,.aac" hidden onChange={e=>{void addMusicSwitch(e.target.files);e.target.value=''}}/><input ref={musicInput} type="file" accept="audio/*,.mp3,.m4a,.wav,.aac" hidden onChange={e=>{importMusic(e.target.files);e.target.value=''}}/>
 <input ref={input} type="file" accept="image/*" multiple hidden onChange={e=>{void addPhotos(e.target.files);e.target.value=''}}/><input ref={videoInput} type="file" accept="video/*,.mov,.mp4,.m4v" multiple hidden onChange={e=>{void addPhotos(e.target.files);e.target.value=''}}/>
-<footer>おもいでシアター · 試作版 v7.8</footer></main>
+<footer>おもいでシアター · 試作版 v7.9</footer></main>
 }
