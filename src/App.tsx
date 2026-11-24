@@ -267,7 +267,11 @@ async function restoreProject(targetId:string){
  if(draftBusy)return;setDraftBusy(true);setDraftInfo('読み込み中…');
  try{
   const draft=await loadProject(targetId);if(!draft){setDraftInfo('保存された作品がありません');return}
-  const next=draft.photos.map(p=>({...p.meta,url:URL.createObjectURL(p.blob)} as Photo));
+  const next=draft.photos.map(p=>{
+   const meta=p.meta as Partial<Photo>;
+   const isVideo=p.blob.type.startsWith('video/') || /\.(mov|mp4|m4v|webm)$/i.test(meta.name ?? '');
+   return {...meta, kind:isVideo?'video':(meta.kind ?? 'image'), url:URL.createObjectURL(p.blob)} as Photo;
+  });
   photosRef.current.forEach(p=>URL.revokeObjectURL(p.url));setPhotos(next);setSelected(0);setUndoStack([]);setRedoStack([]);setPlaying(false);
   const v=draft.settings;
   setTheme(v.theme as Theme);setTitle(v.title as string);setEnding(v.ending as string);setFrame(v.frame as typeof frame);setBackground(v.background as typeof background);setDecoration(v.decoration as typeof decoration);setSticker(v.sticker as string);setCurtainColor((v.curtainColor as typeof curtainColor)||'red');setOpening((v.opening as typeof opening)||(v.theme==='theater'?'curtain':'fade'));setTemplate(v.template as string);setMode(v.mode as typeof mode);setMusicSeconds(v.musicSeconds as number);setDuration(v.duration as number);setAspect(v.aspect as typeof aspect);setBgm(v.bgm as typeof bgm);setVolume(v.volume as number);setBgmStart(Math.max(0,Number(v.bgmStart)||0));setBgmOffset(Math.max(0,Number(v.bgmOffset)||0));setPauseBgmDuringVideo(v.pauseBgmDuringVideo!==false);
@@ -390,5 +394,5 @@ return <main className={step==='home'?'theaterHome':'theaterEditor'}><header><im
 </section><div className="editPageActions"><button onClick={()=>setEditPage('ending')}>← エンディング</button></div></>:null}<button className="secondary" onClick={()=>setStep('home')}>ホームに戻る</button></section>:null}
 <input ref={switchInput} type="file" accept="audio/*,.mp3,.m4a,.wav,.aac" hidden onChange={e=>{void addMusicSwitch(e.target.files);e.target.value=''}}/><input ref={musicInput} type="file" accept="audio/*,.mp3,.m4a,.wav,.aac" hidden onChange={e=>{importMusic(e.target.files);e.target.value=''}}/>
 <input ref={input} type="file" accept="image/*" multiple hidden onChange={e=>{void addPhotos(e.target.files);e.target.value=''}}/><input ref={videoInput} type="file" accept="video/*,.mov,.mp4,.m4v" multiple hidden onChange={e=>{void addPhotos(e.target.files);e.target.value=''}}/>
-<footer>おもいでシアター · 試作版 v8.2</footer></main>
+<footer>おもいでシアター · 試作版 v8.3</footer></main>
 }

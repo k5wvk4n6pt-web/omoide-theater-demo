@@ -2,7 +2,7 @@ export type ExportPhoto={subtitles?:{id:string;text:string;start:number;end:numb
 export type ExportOptions={photos:ExportPhoto[];durations:number[];title:string;ending:string;frame:string;background:string;decoration:string;sticker:string;curtainColor:string;opening?:'curtain'|'sparkle'|'sakura'|'album'|'countdown'|'rainbow'|'fade'|'gold_light'|'floral_wedding'|'sakura_tunnel'|'balloon_party'|'starry_story'|'retro_cinema';theme:string;aspect:'wide'|'vertical'|'square';bgm:'none'|'gentle'|'bright'|'file';audioUrl?:string;volume:number;bgmStart?:number;bgmOffset?:number;musicSwitches?:{id:string;url:string;start:number;offset:number;volume:number;fade:number}[];pauseBgmDuringVideo?:boolean;onProgress:(p:number)=>void};
 const sleep=(ms:number)=>new Promise<void>(resolve=>setTimeout(resolve,ms));
 function loadImage(url:string){return new Promise<HTMLImageElement>((resolve,reject)=>{const img=new Image();img.onload=()=>resolve(img);img.onerror=()=>reject(new Error('写真を読み込めませんでした'));img.src=url})}
-function drawImage(ctx:CanvasRenderingContext2D,img:HTMLImageElement|HTMLVideoElement,w:number,h:number,scale:number,shift:number,offsetY=0,cover=false){const iw=img instanceof HTMLVideoElement?img.videoWidth:img.naturalWidth,ih=img instanceof HTMLVideoElement?img.videoHeight:img.naturalHeight;if(!iw||!ih)return false;const ratio=(cover?Math.max:Math.min)(w/iw,h/ih);const dw=iw*ratio*scale,dh=ih*ratio*scale;ctx.drawImage(img,(w-dw)/2+shift,(h-dh)/2+offsetY,dw,dh);return true}
+function drawImage(ctx:CanvasRenderingContext2D,img:HTMLImageElement|HTMLVideoElement|ImageBitmap,w:number,h:number,scale:number,shift:number,offsetY=0,cover=false){const iw=img instanceof HTMLVideoElement?img.videoWidth:img instanceof HTMLImageElement?img.naturalWidth:img.width,ih=img instanceof HTMLVideoElement?img.videoHeight:img instanceof HTMLImageElement?img.naturalHeight:img.height;if(!iw||!ih)return false;const ratio=(cover?Math.max:Math.min)(w/iw,h/ih);const dw=iw*ratio*scale,dh=ih*ratio*scale;ctx.drawImage(img,(w-dw)/2+shift,(h-dh)/2+offsetY,dw,dh);return true}
 function decorate(ctx:CanvasRenderingContext2D,w:number,h:number,frame:ExportOptions['frame'],frameImages:Record<string,HTMLImageElement>={}){
  if(frame==='none')return;
  if(frameImages[frame]){const im=frameImages[frame],iw=im.naturalWidth,ih=im.naturalHeight;const top=Math.round(ih*.2),bottom=Math.round(ih*.2),side=Math.round(iw*.13);ctx.drawImage(im,0,0,iw,top,0,0,w,h*.2);if(frame!=='theater')ctx.drawImage(im,0,ih-bottom,iw,bottom,0,h*.8,w,h*.2);ctx.drawImage(im,0,top,side,ih-top-bottom,0,h*.2,w*.13,h*.6);ctx.drawImage(im,iw-side,top,side,ih-top-bottom,w*.87,h*.2,w*.13,h*.6);return;}
@@ -68,13 +68,30 @@ export async function exportMovie(o:ExportOptions):Promise<{blob:Blob;extension:
  const canvas=document.createElement('canvas');const wide=o.aspect==='wide';canvas.width=wide?960:540;canvas.height=wide?540:o.aspect==='square'?540:960;
  const ctx=canvas.getContext('2d');if(!ctx)throw Error('描画機能を利用できません');
  if(typeof canvas.captureStream!=='function'||typeof MediaRecorder==='undefined')throw Error('このブラウザは動画の書き出しに対応していません。AndroidではChromeでお試しください。');
- const openingImg=o.opening&&['gold_light','floral_wedding','sakura_tunnel','balloon_party','starry_story','retro_cinema'].includes(o.opening)?await loadImage(import.meta.env.BASE_URL+o.opening+'.png'):null;
+ const openingImg=o.opening&&['gold_light','floral_wedding','sakura_tunnel','balloon_party','starry_story','retro_cinema'].includes(o.opening)?await loadImage(import.meta.env.BASE_URL+o.opening+'.png').catch(()=>{throw Error('オープニングの背景画像を読み込めませんでした。通信状態を確認してもう一度お試しください。')}):null;
  const albumTitle=o.opening==='album'?await loadImage(import.meta.env.BASE_URL + 'AB7615CA-AEB7-4DD6-9C97-061B612CF4ED.png').catch(()=>null):null;
  const albumPage=(o.opening==='album'||o.photos.some(p=>p.frame==='album'))?await loadImage(new URL('../album_page.png', import.meta.url).href).catch(()=>null):null;
  const frameKeys=['sakura','green','gold','polaroid','film','album','balloon','soft','snow','sunflower','theater','rainbow','simple_white','simple_beige','simple_gray','simple_black','photo_corner','hand_pink','hand_blue','washi','film_simple','fine_gold','fine_silver','watercolor'];
  const frameImages:Record<string,HTMLImageElement>={};
- await Promise.all(frameKeys.map(async key=>{try{frameImages[key]=await loadImage(import.meta.env.BASE_URL+key+'.png')}catch{/* keep existing fallback frame */}}));
- const imgs=await Promise.all(o.photos.map(p=>p.kind==='video'?Promise.resolve(null):loadImage(p.url)));
+ await Promise.all(frameKeys.filter(key=>o.frame===key||o.photos.some(photo=>photo.frame===key)).map(async key=>{try{frameImages[key]=await loadImage(import.meta.env.BASE_URL+key+'.png')}catch{/* keep existing fallback frame */}}));
+ const imgs: (HTMLImageElement | ImageBitmap | null)[] = [];
+ for (const [index, photo] of o.photos.entries()) {
+  if (photo.kind === 'video') {
+   imgs.push(null);
+   continue;
+  }
+  try {
+   imgs.push(await loadImage(photo.url));
+  } catch {
+   try {
+    const response = await fetch(photo.url);
+    if (!response.ok) throw Error();
+    imgs.push(await createImageBitmap(await response.blob()));
+   } catch {
+    throw Error((index + 1) + '番目の写真を読み込めませんでした。本編でその写真を確認してください。');
+   }
+  }
+ }
  const videos=await Promise.all(o.photos.map(async p=>{
   if(p.kind!=='video')return null;
   return await new Promise<HTMLVideoElement>((resolve,reject)=>{const v=document.createElement('video');v.muted=true;v.playsInline=true;v.preload='auto';v.onloadeddata=()=>resolve(v);v.onerror=()=>reject(new Error('動画を読み込めませんでした。対応形式の動画を選んでください'));v.src=p.url;v.load()});
