@@ -48,6 +48,7 @@ async function refreshProjects(){const list=await listProjects();setProjects(lis
 
 const [theme,setTheme]=useState<Theme>('theater');
 const [title,setTitle]=useState('');
+const [endingStyle,setEndingStyle]=useState<'message'|'fuji_graduation'>('message');
 const [ending,setEnding]=useState('ありがとう、たくさんの思い出');
 const [frame,setFrame]=useState<'none'|'sakura'|'gold'|'soft'|'green'|'film'|'balloon'|'snow'|'sunflower'|'polaroid'|'album'>('none');
 const [background,setBackground]=useState<'default'|'sky'|'sakura'|'stars'|'sunset'|'sparkle'|'rainbow'>('default');
@@ -258,7 +259,7 @@ async function saveProject(){
   const switchFiles=await Promise.all(musicSwitches.map(async m=>({id:m.id,blob:await fetch(m.url).then(r=>r.blob())})));
   const savedAt=new Date().toISOString();
   const targetId=projectId??id();
-  await persistProject(targetId,{version:1,savedAt,photos:items,audio,switchFiles,settings:{theme,title,ending,frame,background,decoration,sticker,curtainColor,opening,template,mode,musicSeconds,duration,aspect,bgm,volume,bgmStart,bgmOffset,musicSwitches:musicSwitches.map(({url,...m})=>m),pauseBgmDuringVideo}});
+  await persistProject(targetId,{version:1,savedAt,photos:items,audio,switchFiles,settings:{theme,title,ending,endingStyle,frame,background,decoration,sticker,curtainColor,opening,template,mode,musicSeconds,duration,aspect,bgm,volume,bgmStart,bgmOffset,musicSwitches:musicSwitches.map(({url,...m})=>m),pauseBgmDuringVideo}});
   setProjectId(targetId);await refreshProjects();setDraftInfo('保存しました：'+new Date(savedAt).toLocaleString('ja-JP'));
  }catch(e){setDraftInfo('保存できませんでした。端末の空き容量やプライベートブラウズ設定をご確認ください。'+(e instanceof Error?' '+e.message:''))}
  finally{setDraftBusy(false)}
@@ -274,7 +275,7 @@ async function restoreProject(targetId:string){
   });
   photosRef.current.forEach(p=>URL.revokeObjectURL(p.url));setPhotos(next);setSelected(0);setUndoStack([]);setRedoStack([]);setPlaying(false);
   const v=draft.settings;
-  setTheme(v.theme as Theme);setTitle(v.title as string);setEnding(v.ending as string);setFrame(v.frame as typeof frame);setBackground(v.background as typeof background);setDecoration(v.decoration as typeof decoration);setSticker(v.sticker as string);setCurtainColor((v.curtainColor as typeof curtainColor)||'red');setOpening((v.opening as typeof opening)||(v.theme==='theater'?'curtain':'fade'));setTemplate(v.template as string);setMode(v.mode as typeof mode);setMusicSeconds(v.musicSeconds as number);setDuration(v.duration as number);setAspect(v.aspect as typeof aspect);setBgm(v.bgm as typeof bgm);setVolume(v.volume as number);setBgmStart(Math.max(0,Number(v.bgmStart)||0));setBgmOffset(Math.max(0,Number(v.bgmOffset)||0));setPauseBgmDuringVideo(v.pauseBgmDuringVideo!==false);
+  setTheme(v.theme as Theme);setTitle(v.title as string);setEnding(v.ending as string);setEndingStyle(v.endingStyle==='fuji_graduation'?'fuji_graduation':'message');setFrame(v.frame as typeof frame);setBackground(v.background as typeof background);setDecoration(v.decoration as typeof decoration);setSticker(v.sticker as string);setCurtainColor((v.curtainColor as typeof curtainColor)||'red');setOpening((v.opening as typeof opening)||(v.theme==='theater'?'curtain':'fade'));setTemplate(v.template as string);setMode(v.mode as typeof mode);setMusicSeconds(v.musicSeconds as number);setDuration(v.duration as number);setAspect(v.aspect as typeof aspect);setBgm(v.bgm as typeof bgm);setVolume(v.volume as number);setBgmStart(Math.max(0,Number(v.bgmStart)||0));setBgmOffset(Math.max(0,Number(v.bgmOffset)||0));setPauseBgmDuringVideo(v.pauseBgmDuringVideo!==false);
   setMusicSwitches((Array.isArray(v.musicSwitches)?v.musicSwitches:[]).map((m:MusicSwitch)=>{const item=draft.switchFiles?.find(x=>x.id===m.id);return {...m,url:item?URL.createObjectURL(item.blob):''}}).filter((m:MusicSwitch)=>m.url));
   if(draft.audio){setAudioFile({name:draft.audio.name,seconds:draft.audio.seconds,url:URL.createObjectURL(draft.audio.blob)})}else setAudioFile(null);
   setProjectId(targetId);setStep('edit');setDraftInfo('保存した作品を開きました');
@@ -288,13 +289,13 @@ async function eraseProject(targetId:string){
 async function copyProject(targetId:string){
  try{await duplicateProject(targetId,id());await refreshProjects();setDraftInfo('作品を複製しました')}catch{setDraftInfo('複製できませんでした')}
 }
-function newProject(){setPlaying(false);stopMusic();setPhotos([]);setProjectId(null);setSelected(0);setUndoStack([]);setRedoStack([]);setAudioFile(null);setMusicSwitches([]);setTitle('');setEnding('ありがとう、たくさんの思い出');setEditPage('opening');setStep('edit');setDraftInfo('')}
+function newProject(){setPlaying(false);stopMusic();setPhotos([]);setProjectId(null);setSelected(0);setUndoStack([]);setRedoStack([]);setAudioFile(null);setMusicSwitches([]);setTitle('');setEndingStyle('message');setEnding('ありがとう、たくさんの思い出');setEditPage('opening');setStep('edit');setDraftInfo('')}
 
 async function makeMovie(){
  if(!photos.length||exporting)return;
  setPlaying(false);stopMusic();setExportError('');setExportProgress(0);setExporting(true);
  try{
-  const {blob,extension}=await exportMovie({photos:photos.map(p=>({...p,frame:(p.frame??frame)==='album'?'album':'none',decoration:p.decoration??decoration,sticker:p.sticker??sticker})),durations:computed,title,ending,frame:'none',background,decoration,sticker,curtainColor,opening,theme,aspect,bgm,audioUrl:audioFile?.url,volume,bgmStart,bgmOffset,musicSwitches:orderedSwitches.map(m=>({...m,start:switchAt(m)})),pauseBgmDuringVideo,onProgress:setExportProgress});
+  const {blob,extension}=await exportMovie({photos:photos.map(p=>({...p,frame:(p.frame??frame)==='album'?'album':'none',decoration:p.decoration??decoration,sticker:p.sticker??sticker})),durations:computed,title,ending,endingStyle,frame:'none',background,decoration,sticker,curtainColor,opening,theme,aspect,bgm,audioUrl:audioFile?.url,volume,bgmStart,bgmOffset,musicSwitches:orderedSwitches.map(m=>({...m,start:switchAt(m)})),pauseBgmDuringVideo,onProgress:setExportProgress});
   if(exportUrl.current)URL.revokeObjectURL(exportUrl.current);
   const url=URL.createObjectURL(blob);exportUrl.current=url;
   setExportResult({url,name:'omoide-theater.'+extension,blob});
@@ -328,7 +329,11 @@ return <main className={step==='home'?'theaterHome':'theaterEditor'}><header><im
 {playing&&phase==='photos'&&playIndex>0&&transitionEffect!=='none'&&transitionEffect!=='page'&&photos[playIndex-1].kind!=='video'?<div key={'under-'+sceneKey} className="transitionUnderlay"><div className={(photos[playIndex-1].frame??frame)==='album'?'albumUnderlayClip':'underlayClip'}><img src={photos[playIndex-1].url} alt="" style={{transform:'scale('+(photos[playIndex-1].zoom??1)+') translate('+(photos[playIndex-1].offsetX??0)+'%,'+(photos[playIndex-1].offsetY??0)+'%)'}}/></div>{(photos[playIndex-1].frame??frame)==='album'?<div className="albumCustomPage"/>:null}</div>:null}
 {activePhoto?<div className={shownFrame==='album'?'albumMediaBoundary':undefined} style={shownFrame==='album'?undefined:{display:'contents'}}><div key={sceneKey+'-'+(activePhoto?.id||'')} onPointerDown={e=>{if(editTool==='position')beginDrag(e,'photo')}} onPointerMove={moveDrag} onPointerUp={endDrag} onPointerCancel={endDrag} className={'scenePhoto '+(shownFrame==='album'?' albumPhotoInset ':'')+(shownFrame==='album'&&!albumFrameReady?' albumFrameLoading ':'')+''+(playing&&phase==='photos'?'animate '+(transitionEffect==='page'?'albumStill':transitionEffect):'')+(editTool==='position'?' draggablePhoto':'')} style={{'--scene-duration':activeDuration+'s'} as CSSProperties}>{activePhoto.kind==='video'?<video ref={previewVideo} src={activePhoto.url} playsInline muted={!previewSound||!(activePhoto.keepAudio??true)} controls={!playing} preload="auto" onLoadedData={e=>{if(playing&&phase==='photos')void e.currentTarget.play().catch(()=>{})}} style={{transform:'scale('+(activePhoto.zoom??1)+') translate('+(activePhoto.offsetX??0)+'%,'+(activePhoto.offsetY??0)+'%)'}}/>:<img src={activePhoto.url} alt="選択中の写真" style={{transform:'scale('+(activePhoto.zoom??1)+') translate('+(activePhoto.offsetX??0)+'%,'+(activePhoto.offsetY??0)+'%)'}} />}</div></div>:<span>下のボタンから写真や動画を追加できます</span>}
 {playing&&phase==='intro'&&opening==='curtain'?<div key={'curtain-'+sceneKey} className={'curtainOverlay curtain-'+curtainColor}><div className="curtainPanel curtainLeft"/><div className="curtainPanel curtainRight"/><div className="curtainCaption">{title}</div></div>:null}
-{playing&&phase==='outro'?<div className="endingScreen"><div>Fin.</div><small>{ending}</small></div>:null}
+{playing && phase==='outro' ? (
+ endingStyle==='fuji_graduation'
+  ? <img className="openingTitleArtwork" src={new URL('../fuji-graduation-ending.jpeg', import.meta.url).href} alt="たくさんの思い出をありがとう 令和9年 卒園式"/>
+  : <div className="endingScreen"><div>Fin.</div><small>{ending}</small></div>
+):null}
 {shownDecor!=='none'&&(!playing||phase==='photos')?<div className={'motionDecor decor-'+shownDecor} aria-hidden="true">{Array.from({length:12},(_,i)=><span key={i} style={{left:(i*37%95)+'%',animationDelay:-(i*.47)+'s'}}>{shownDecor==='petals'?'🌸':shownDecor==='glitter'||shownDecor==='light'?'✦':shownDecor==='bubbles'?'◯':shownDecor==='hearts'?'♥':shownDecor==='fireworks'?'✺':shownDecor==='snow'?'❄':'◆'}</span>)}</div>:null}
 {shownSticker!=='none'?<div className="previewSticker" aria-hidden="true">{symbols[shownSticker]}</div>:null}
 {shownFrame==='album'&&activePhoto&&(!playing||phase==='photos')?<div className="albumCustomPage" aria-hidden="true"/>:null}
@@ -364,7 +369,13 @@ return <main className={step==='home'?'theaterHome':'theaterEditor'}><header><im
 <option value="none">フレームなし</option><option value="sakura">さくら</option><option value="green">グリーン</option><option value="gold">エレガント</option><option value="polaroid">ポラロイド</option><option value="film">フィルム</option><option value="album">アルバム風</option><option value="balloon">バルーン</option><option value="soft">ハート</option><option value="snow">雪</option><option value="sunflower">ひまわり</option></select></label>
 <label>動く装飾<select value={decoration} onChange={e=>setDecoration(e.target.value as typeof decoration)}><option value="none">なし</option><option value="petals">花びら</option><option value="glitter">キラキラ</option><option value="bubbles">シャボン玉</option><option value="hearts">ハート</option><option value="fireworks">花火</option><option value="snow">雪</option><option value="confetti">紙吹雪</option><option value="light">光の粒</option></select></label>
 <label>スタンプ<select value={sticker} onChange={e=>setSticker(e.target.value)}><option value="none">なし</option>{Object.entries(symbols).map(([key,value])=><option key={key} value={key}>{value} {key}</option>)}</select></label>
-<label>最後に表示するメッセージ<textarea rows={2} maxLength={70} value={ending} onChange={e=>setEnding(e.target.value)} placeholder="ありがとう、たくさんの思い出"/></label>
+<label>エンディングの種類
+ <select value={endingStyle} onChange={e=>setEndingStyle(e.target.value==='fuji_graduation'?'fuji_graduation':'message')}>
+  <option value="message">メッセージ</option>
+  <option value="fuji_graduation">🌸 卒園式・たくさんの思い出をありがとう</option>
+ </select>
+</label>
+{endingStyle==='message' ? <label>最後に表示するメッセージ<textarea rows={2} maxLength={70} value={ending} onChange={e=>setEnding(e.target.value)} placeholder="ありがとう、たくさんの思い出"/></label> : null}
 <p className="note">背景やフレーム・装飾は本編にも反映されます。</p>
 </section><div className="editPageActions"><button onClick={()=>setEditPage('main')}>← 本編</button><button className="primary" onClick={()=>setEditPage('finish')}>次へ：完成・保存 →</button></div></>:null}{editPage==='main'?<><section className="musicBox"><h3>🎵 BGMを選ぶ</h3>
 <label>音楽の種類<select value={bgm} onChange={e=>{stopMusic();setBgm(e.target.value as typeof bgm)}}>
@@ -395,5 +406,5 @@ return <main className={step==='home'?'theaterHome':'theaterEditor'}><header><im
 </section><div className="editPageActions"><button onClick={()=>setEditPage('ending')}>← エンディング</button></div></>:null}<button className="secondary" onClick={()=>setStep('home')}>ホームに戻る</button></section>:null}
 <input ref={switchInput} type="file" accept="audio/*,.mp3,.m4a,.wav,.aac" hidden onChange={e=>{void addMusicSwitch(e.target.files);e.target.value=''}}/><input ref={musicInput} type="file" accept="audio/*,.mp3,.m4a,.wav,.aac" hidden onChange={e=>{importMusic(e.target.files);e.target.value=''}}/>
 <input ref={input} type="file" accept="image/*" multiple hidden onChange={e=>{void addPhotos(e.target.files);e.target.value=''}}/><input ref={videoInput} type="file" accept="video/*,.mov,.mp4,.m4v" multiple hidden onChange={e=>{void addPhotos(e.target.files);e.target.value=''}}/>
-<footer>おもいでシアター · 試作版 v8.5</footer></main>
+<footer>おもいでシアター · 試作版 v8.6</footer></main>
 }

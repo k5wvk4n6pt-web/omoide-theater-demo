@@ -1,5 +1,5 @@
 export type ExportPhoto={subtitles?:{id:string;text:string;start:number;end:number}[];subtitleColor?:string;subtitleSize?:number;subtitleOutline?:string;trimStart?:number;sourceDuration?:number;keepAudio?:boolean;kind?:'image'|'video';url:string;duration:number;effect:'fade'|'zoom'|'slide'|'page'|'heart'|'curtain'|'none'|'wipe'|'slideUp'|'circle'|'blinds'|'flash'|'blur'|'mosaic'|'random';frame?:string;decoration?:string;sticker?:string;caption?:string;zoom?:number;offsetX?:number;offsetY?:number;captionX?:number;captionY?:number;captionFont?:string;captionColor?:string;captionSize?:number;captionWeight?:number;captionOutline?:boolean;captionOutlineColor?:string;captionBackground?:boolean;captionMotion?:'none'|'fade'|'rise'|'slide'};
-export type ExportOptions={photos:ExportPhoto[];durations:number[];title:string;ending:string;frame:string;background:string;decoration:string;sticker:string;curtainColor:string;opening?:'curtain'|'sparkle'|'sakura'|'album'|'countdown'|'rainbow'|'fade'|'gold_light'|'floral_wedding'|'sakura_tunnel'|'balloon_party'|'starry_story'|'retro_cinema'|'fuji_graduation';theme:string;aspect:'wide'|'vertical'|'square';bgm:'none'|'gentle'|'bright'|'file';audioUrl?:string;volume:number;bgmStart?:number;bgmOffset?:number;musicSwitches?:{id:string;url:string;start:number;offset:number;volume:number;fade:number}[];pauseBgmDuringVideo?:boolean;onProgress:(p:number)=>void};
+export type ExportOptions={photos:ExportPhoto[];durations:number[];title:string;ending:string;endingStyle?:'message'|'fuji_graduation';frame:string;background:string;decoration:string;sticker:string;curtainColor:string;opening?:'curtain'|'sparkle'|'sakura'|'album'|'countdown'|'rainbow'|'fade'|'gold_light'|'floral_wedding'|'sakura_tunnel'|'balloon_party'|'starry_story'|'retro_cinema'|'fuji_graduation';theme:string;aspect:'wide'|'vertical'|'square';bgm:'none'|'gentle'|'bright'|'file';audioUrl?:string;volume:number;bgmStart?:number;bgmOffset?:number;musicSwitches?:{id:string;url:string;start:number;offset:number;volume:number;fade:number}[];pauseBgmDuringVideo?:boolean;onProgress:(p:number)=>void};
 const sleep=(ms:number)=>new Promise<void>(resolve=>setTimeout(resolve,ms));
 function loadImage(url:string){return new Promise<HTMLImageElement>((resolve,reject)=>{const img=new Image();img.onload=()=>resolve(img);img.onerror=()=>reject(new Error('写真を読み込めませんでした'));img.src=url})}
 function drawPageMedia(ctx: CanvasRenderingContext2D, media: HTMLImageElement | HTMLVideoElement | ImageBitmap, w: number, h: number, photo: ExportPhoto, defaultFrame: string, animationScale = 1, animationShift = 0) {
@@ -90,6 +90,9 @@ export async function exportMovie(o:ExportOptions):Promise<{blob:Blob;extension:
  const titleArtwork = o.opening === 'fuji_graduation'
   ? await loadImage(new URL('../fuji-graduation.jpeg', import.meta.url).href)
   : null;
+ const endingArtwork = o.endingStyle === 'fuji_graduation'
+  ? await loadImage(new URL('../fuji-graduation-ending.jpeg', import.meta.url).href)
+  : null;
  const albumTitle=o.opening==='album'?await loadImage(import.meta.env.BASE_URL + 'AB7615CA-AEB7-4DD6-9C97-061B612CF4ED.png').catch(()=>null):null;
  const albumPage=(o.opening==='album'||o.photos.some(p=>p.frame==='album'))?await loadImage(new URL('../album_page.png', import.meta.url).href).catch(()=>null):null;
  const frameKeys=['sakura','green','gold','polaroid','film','album','balloon','soft','snow','sunflower','theater','rainbow','simple_white','simple_beige','simple_gray','simple_black','photo_corner','hand_pink','hand_blue','washi','film_simple','fine_gold','fine_silver','watercolor'];
@@ -152,6 +155,10 @@ export async function exportMovie(o:ExportOptions):Promise<{blob:Blob;extension:
      ctx.fillRect(0, 0, w, h);
      drawImage(ctx, titleArtwork, w, h, 1, 0);
     } else if(albumTitle){ctx.drawImage(albumTitle,0,0,w,h);ctx.fillStyle='#865b63';ctx.font='bold '+Math.round(w*.055)+'px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(o.title,w*.51,h*.50,w*.65)}else drawOpening(ctx,o,w,h,elapsed,openingImg);
+   }else if(elapsed>=total-6 && endingArtwork){
+    ctx.fillStyle = '#1c1425';
+    ctx.fillRect(0, 0, w, h);
+    drawImage(ctx, endingArtwork, w, h, 1, 0);
    }else if(elapsed>=total-6){text(ctx,'Fin.',w,h,wide?66:60);ctx.font='26px sans-serif';ctx.fillStyle='#f7e7d6';ctx.textAlign='center';ctx.fillText(o.ending||o.title,w/2,h*.64,w*.85)}
    else{let t=elapsed-6,index=0;while(index<o.durations.length-1&&t>=o.durations[index]){t-=o.durations[index];index++}const d=o.durations[index]||5;const fraction=Math.min(1,t/d);const photo=o.photos[index];const effect=photo.effect==='random'?['fade','wipe','circle','slideUp','blur','flash'][index%6]:photo.effect;const scale=effect==='zoom'?1+.13*fraction:effect==='slide'?1.06:1;const shift=effect==='slide'?(0.05-0.1*fraction)*w:0;if(index>0&&t<.85&&effect!=='none'&&effect!=='page'){const prev=o.photos[index-1];if(imgs[index-1])drawPageMedia(ctx,imgs[index-1]!,w,h,prev,o.frame);if(prev.frame==='album'&&albumPage)ctx.drawImage(albumPage,0,0,w,h)}ctx.save();ctx.globalAlpha=effect==='fade'?Math.min(1,t/.85):1;
  if(effect==='page'&&index===0&&o.opening!=='album'){ctx.translate(w,0);ctx.scale(Math.max(.01,Math.min(1,t/.65)),1);ctx.translate(-w,0)}
