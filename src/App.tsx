@@ -203,7 +203,7 @@ const activeDuration=computed[playing?playIndex:selected]||duration;
 const activeSubtitle=activePhoto?.subtitles?.find(c=>subtitleTime>=c.start&&subtitleTime<c.end);
 const shownFrame=(activePhoto?.frame??frame)==='album'?'album':'none';
 const [albumFrameReady,setAlbumFrameReady]=useState(false);
-useEffect(()=>{const im=new Image();im.onload=()=>setAlbumFrameReady(true);im.src='/omoide-theater-demo/album_page.png';if(im.complete&&im.naturalWidth)setAlbumFrameReady(true);return()=>{im.onload=null}},[]);
+useEffect(()=>{const im=new Image();im.onload=()=>setAlbumFrameReady(true);im.src='/omoide-theater-demo/5D7629A6-7CD4-4630-9F0B-41ED75881354.png';if(im.complete&&im.naturalWidth)setAlbumFrameReady(true);return()=>{im.onload=null}},[]);
 const shownDecor=activePhoto?.decoration??decoration;
 const shownSticker=activePhoto?.sticker??sticker;
 function applyTemplate(t:string){setTemplate(t);const presets:Record<string,{theme:Theme;frame:typeof frame;background:typeof background;decoration:typeof decoration;title:string;ending:string}>={graduation:{theme:'sakura',frame:'sakura',background:'sakura',decoration:'petals',title:'卒園おめでとう',ending:'たくさんの思い出をありがとう'},wedding:{theme:'sparkle',frame:'gold',background:'sparkle',decoration:'glitter',title:'Wedding Story',ending:'いつまでもお幸せに'},birthday:{theme:'sparkle',frame:'balloon',background:'rainbow',decoration:'confetti',title:'Happy Birthday',ending:'笑顔あふれる一年に'},travel:{theme:'album',frame:'polaroid',background:'sky',decoration:'bubbles',title:'旅の思い出',ending:'また一緒に旅しよう'},growth:{theme:'album',frame:'soft',background:'rainbow',decoration:'hearts',title:'成長の記録',ending:'これからも元気に大きくなってね'},theater:{theme:'theater',frame:'film',background:'stars',decoration:'light',title:'大切な思い出',ending:'Fin.'}};const p=presets[t];if(p){setTheme(p.theme);setFrame(p.frame);setBackground(p.background);setDecoration(p.decoration);setTitle(p.title);setEnding(p.ending)}}
@@ -383,5 +383,5 @@ return <main><header><div className="brand">✦ おもいでシアター</div><d
 </section><div className="editPageActions"><button onClick={()=>setEditPage('ending')}>← エンディング</button></div></>:null}<button className="secondary" onClick={()=>setStep('home')}>ホームに戻る</button></section>:null}
 <input ref={switchInput} type="file" accept="audio/*,.mp3,.m4a,.wav,.aac" hidden onChange={e=>{void addMusicSwitch(e.target.files);e.target.value=''}}/><input ref={musicInput} type="file" accept="audio/*,.mp3,.m4a,.wav,.aac" hidden onChange={e=>{importMusic(e.target.files);e.target.value=''}}/>
 <input ref={input} type="file" accept="image/*" multiple hidden onChange={e=>{void addPhotos(e.target.files);e.target.value=''}}/><input ref={videoInput} type="file" accept="video/*,.mov,.mp4,.m4v" multiple hidden onChange={e=>{void addPhotos(e.target.files);e.target.value=''}}/>
-<footer>おもいでシアター · 試作版 v7.2</footer></main>
+<footer>おもいでシアター · 試作版 v7.3</footer></main>
 }
