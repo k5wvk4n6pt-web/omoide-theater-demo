@@ -256,3 +256,9 @@ input[type="file"][hidden]{display:none!important}
  object-fit: contain;
  background: #1c1425;
 }
+
+.openingStill .curtainPanel,
+.openingStill .curtainCaption,
+.openingStill .openingOverlay * { animation: none !important; }
+.openingStill .openingPhotoParticles { display: none; }
+.openingStill .countdownThree { opacity: 1; }
