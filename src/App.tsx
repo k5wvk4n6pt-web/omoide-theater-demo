@@ -345,16 +345,8 @@ return <main className={step==='home'?'theaterHome':'theaterEditor'}><header><im
 <label>オープニング演出<select value={opening} onChange={e=>setOpening(e.target.value as typeof opening)}><option value="curtain">🎭 カーテン</option><option value="fuji_graduation">🌸 令和9年 卒園式（ふじほいくえん）</option><option value="sparkle">✨ キラキラ登場</option><option value="sakura">🌸 桜の舞</option><option value="album">📖 アルバムが開く</option><option value="countdown">🎞️ 映画カウントダウン</option><option value="rainbow">🌈 虹と雲</option><option value="fade">✧ シンプルフェード</option><optgroup label="✨ 写真背景のオープニング"><option value="gold_light">✨ ゴールドの光</option><option value="floral_wedding">💐 フラワーウェディング</option><option value="sakura_tunnel">🌸 桜のトンネル</option><option value="balloon_party">🎈 バルーンパーティー</option><option value="starry_story">🌙 星空の物語</option><option value="retro_cinema">🎞️ レトロ映画</option></optgroup></select></label>
 {opening==='curtain'?<label>カーテンの色<select value={curtainColor} onChange={e=>setCurtainColor(e.target.value as typeof curtainColor)}><option value="red">クラシック（赤）</option><option value="pink">パステル（ピンク）</option><option value="navy">ナイト（紺）</option><option value="gold">ゴールド</option></select></label>:null}
 {opening==='album'?<p className="note">📖 本編の切り替えは素材ごとに選択できます。</p>:null}
-{opening==='fuji_graduation'?<p className="note">画像に入っているタイトルを表示します。</p>:<label>オープニングタイトル<input value={title} onChange={e=>setTitle(e.target.value)}/></label>}<label>動画の向き<select value={aspect} onChange={e=>setAspect(e.target.value as typeof aspect)}><option value="wide">横型（16:9）</option><option value="vertical">縦型（9:16）</option><option value="square">正方形（1:1）</option></select></label><p className="note">オープニング演出とタイトルを選びます。タイトルは本編中には表示しません。</p></section><div className="editPageActions"><button className="primary" onClick={()=>setEditPage('main')}>次へ：本編 →</button></div></>:null}{editPage==='ending'?<><section className="designBox"><h3>🌷 エンディング作成</h3>
-<label>スタンプ<select value={sticker} onChange={e=>setSticker(e.target.value)}><option value="none">なし</option>{Object.entries(symbols).map(([key,value])=><option key={key} value={key}>{value} {key}</option>)}</select></label>
-<label>エンディングの種類
- <select value={endingStyle} onChange={e=>setEndingStyle(e.target.value==='fuji_graduation'?'fuji_graduation':'message')}>
-  <option value="message">メッセージ</option>
-  <option value="fuji_graduation">🌸 卒園式・たくさんの思い出をありがとう</option>
- </select>
-</label>
-{endingStyle==='message' ? <label>最後に表示するメッセージ<textarea rows={2} maxLength={70} value={ending} onChange={e=>setEnding(e.target.value)} placeholder="ありがとう、たくさんの思い出"/></label> : null}
-</section><div className="editPageActions"><button onClick={()=>setEditPage('main')}>← 本編</button><button className="primary" onClick={()=>setEditPage('finish')}>次へ：完成・保存 →</button></div></>:null}{editPage==='main'?<><section className="musicBox"><h3>🎵 BGMを選ぶ</h3>
+{opening==='fuji_graduation'?<p className="note">画像に入っているタイトルを表示します。</p>:<label>オープニングタイトル<input value={title} onChange={e=>setTitle(e.target.value)}/></label>}<label>動画の向き<select value={aspect} onChange={e=>setAspect(e.target.value as typeof aspect)}><option value="wide">横型（16:9）</option><option value="vertical">縦型（9:16）</option><option value="square">正方形（1:1）</option></select></label><p className="note">オープニング演出とタイトルを選びます。タイトルは本編中には表示しません。</p></section>
+<section className="musicBox"><h3>🎵 BGMを選ぶ</h3>
 <label>音楽の種類<select value={bgm} onChange={e=>{stopMusic();setBgm(e.target.value as typeof bgm)}}>
 <option value="gentle">やさしい音色（試作用オリジナル音）</option>
 <option value="bright">明るい音色（試作用オリジナル音）</option>
@@ -369,7 +361,17 @@ return <main className={step==='home'?'theaterHome':'theaterEditor'}><header><im
 <label>BGM音量：{volume}%<input type="range" min="0" max="100" step="5" value={volume} onChange={e=>setVolume(Number(e.target.value))}/></label>
 {musicError?<p className="musicError" role="alert">{musicError}</p>:null}
 <p className="note">アプリ内の音は動作確認用の簡易音源です。正式なBGM曲は後から追加します。Apple Musicなど保護された配信曲は取り込めません。</p>
-</section><div className="editPageActions"><button onClick={()=>setEditPage('opening')}>← オープニング</button><button className="primary" onClick={()=>setEditPage('ending')}>次へ：エンディング →</button></div></>:null}{editPage==='finish'?<><h3>ムービーの長さ</h3><div className="mode"><label><input type="radio" checked={mode==='photo'} onChange={()=>setMode('photo')}/> 写真の表示時間を基準</label><label><input type="radio" checked={mode==='music'} onChange={()=>setMode('music')}/> 音楽の長さを基準</label></div>{mode==='photo'?<label>新しく追加する写真の初期表示時間：{duration}秒<input type="range" min="2" max="15" value={duration} onChange={e=>setDuration(Number(e.target.value))}/><button className="small" onClick={()=>setPhotos(p=>p.map(x=>({...x,duration})))}>全写真に適用</button></label>:<label>音楽の使用時間（秒）<input type="number" min="15" max="3600" value={musicSeconds} onChange={e=>setMusicSeconds(Math.max(15,Number(e.target.value)||15))}/></label>}<div className="summary">完成予定時間：約 {Math.floor(total/60)}分{Math.round(total%60)}秒（前後の演出各6秒を含む）</div><label>タイトル<input value={title} onChange={e=>setTitle(e.target.value)}/></label><section className="exportBox"><h3>🎬 動画を書き出す（試験機能）</h3>
+</section>
+<div className="editPageActions"><button className="primary" onClick={()=>setEditPage('main')}>次へ：本編 →</button></div></>:null}{editPage==='ending'?<><section className="designBox"><h3>🌷 エンディング作成</h3>
+<label>スタンプ<select value={sticker} onChange={e=>setSticker(e.target.value)}><option value="none">なし</option>{Object.entries(symbols).map(([key,value])=><option key={key} value={key}>{value} {key}</option>)}</select></label>
+<label>エンディングの種類
+ <select value={endingStyle} onChange={e=>setEndingStyle(e.target.value==='fuji_graduation'?'fuji_graduation':'message')}>
+  <option value="message">メッセージ</option>
+  <option value="fuji_graduation">🌸 卒園式・たくさんの思い出をありがとう</option>
+ </select>
+</label>
+{endingStyle==='message' ? <label>最後に表示するメッセージ<textarea rows={2} maxLength={70} value={ending} onChange={e=>setEnding(e.target.value)} placeholder="ありがとう、たくさんの思い出"/></label> : null}
+</section><div className="editPageActions"><button onClick={()=>setEditPage('main')}>← 本編</button><button className="primary" onClick={()=>setEditPage('finish')}>次へ：完成・保存 →</button></div></>:null}{editPage==='main'?<div className="editPageActions"><button onClick={()=>setEditPage('opening')}>← オープニング</button><button className="primary" onClick={()=>setEditPage('ending')}>次へ：エンディング →</button></div>:null}{editPage==='finish'?<><h3>ムービーの長さ</h3><div className="mode"><label><input type="radio" checked={mode==='photo'} onChange={()=>setMode('photo')}/> 写真の表示時間を基準</label><label><input type="radio" checked={mode==='music'} onChange={()=>setMode('music')}/> 音楽の長さを基準</label></div>{mode==='photo'?<label>新しく追加する写真の初期表示時間：{duration}秒<input type="range" min="2" max="15" value={duration} onChange={e=>setDuration(Number(e.target.value))}/><button className="small" onClick={()=>setPhotos(p=>p.map(x=>({...x,duration})))}>全写真に適用</button></label>:<label>音楽の使用時間（秒）<input type="number" min="15" max="3600" value={musicSeconds} onChange={e=>setMusicSeconds(Math.max(15,Number(e.target.value)||15))}/></label>}<div className="summary">完成予定時間：約 {Math.floor(total/60)}分{Math.round(total%60)}秒（前後の演出各6秒を含む）</div><label>タイトル<input value={title} onChange={e=>setTitle(e.target.value)}/></label><section className="exportBox"><h3>🎬 動画を書き出す（試験機能）</h3>
 <p className="note">動画の元音声を残すか選べます。BGMと同時に流れる場合は音量にご注意ください。作成には動画の長さと同じ程度の時間がかかります。</p>
 <button className="primary" disabled={exporting||!photos.length} onClick={makeMovie}>{exporting?'動画を作成中… '+exportProgress+'%':'動画を作成する'}</button>
 {exporting?<progress max="100" value={exportProgress} style={{width:'100%'}}/>:null}
@@ -383,5 +385,5 @@ return <main className={step==='home'?'theaterHome':'theaterEditor'}><header><im
 </section><div className="editPageActions"><button onClick={()=>setEditPage('ending')}>← エンディング</button></div></>:null}<button className="secondary" onClick={()=>setStep('home')}>ホームに戻る</button></section>:null}
 <input ref={switchInput} type="file" accept="audio/*,.mp3,.m4a,.wav,.aac" hidden onChange={e=>{void addMusicSwitch(e.target.files);e.target.value=''}}/><input ref={musicInput} type="file" accept="audio/*,.mp3,.m4a,.wav,.aac" hidden onChange={e=>{importMusic(e.target.files);e.target.value=''}}/>
 <input ref={input} type="file" accept="image/*" multiple hidden onChange={e=>{void addPhotos(e.target.files);e.target.value=''}}/><input ref={videoInput} type="file" accept="video/*,.mov,.mp4,.m4v" multiple hidden onChange={e=>{void addPhotos(e.target.files);e.target.value=''}}/>
-<footer>おもいでシアター · 試作版 v8.10</footer></main>
+<footer>おもいでシアター · 試作版 v8.11</footer></main>
 }
