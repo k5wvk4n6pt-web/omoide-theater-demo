@@ -2,7 +2,8 @@ import {useEffect,useMemo,useRef,useState} from 'react';
 import type {ChangeEvent,CSSProperties} from 'react';
 import {exportMovie} from './exportMovie';
 import {listProjects,saveProject as persistProject,loadProject,deleteProject,duplicateProject} from './draftStore';
-import type {ProjectSummary} from './draftStore';
+import type {ProjectSummary,StoredProject} from './draftStore';
+import {loadSharedProject,newShareToken,saveSharedProject,shareTokenFromHash,SharedProjectConflict} from './sharedProject';
 type SubtitleCue={id:string;text:string;start:number;end:number};
 type MusicSwitch={id:string;name:string;url:string;seconds:number;start:number;anchor:'time'|'photo';photoId?:string;offset:number;volume:number;fade:number};
 type Photo={subtitles?:SubtitleCue[];subtitleColor?:string;subtitleSize?:number;subtitleOutline?:string;trimStart?:number;sourceDuration?:number;keepAudio?:boolean;kind?:'image'|'video';id:string;name:string;url:string;duration:number;effect:'fade'|'zoom'|'slide'|'page'|'heart'|'curtain'|'none'|'wipe'|'slideUp'|'circle'|'blinds'|'flash'|'blur'|'mosaic'|'random';sticker?:string;caption?:string;zoom?:number;offsetX?:number;offsetY?:number;captionX?:number;captionY?:number;captionFont?:string;captionColor?:string;captionSize?:number;captionWeight?:number;captionOutline?:boolean;captionOutlineColor?:string;captionBackground?:boolean;captionMotion?:'none'|'fade'|'rise'|'slide'};
@@ -42,6 +43,11 @@ const [draftInfo,setDraftInfo]=useState('');
 const [draftBusy,setDraftBusy]=useState(false);
 const [projects,setProjects]=useState<ProjectSummary[]>([]);
 const [projectId,setProjectId]=useState<string|null>(null);
+const [shared,setShared]=useState<{token:string;etag:string}|null>(null);
+const [shareNotice,setShareNotice]=useState('');
+const [shareConflict,setShareConflict]=useState(false);
+const pendingShareToken=useRef<string|null>(null);
+const shareLinkField=useRef<HTMLInputElement>(null);
 const [thumbUrls,setThumbUrls]=useState<Record<string,string>>({});
 const thumbRef=useRef<Record<string,string>>({});
 async function refreshProjects(){const list=await listProjects();setProjects(list);Object.values(thumbRef.current).forEach(url=>URL.revokeObjectURL(url));const urls:Record<string,string>={};list.forEach(p=>{if(p.thumbnail)urls[p.id]=URL.createObjectURL(p.thumbnail)});thumbRef.current=urls;setThumbUrls(urls)}
@@ -291,23 +297,31 @@ function startPreview(){
  for(const m of orderedSwitches){const at=Math.max(0,switchAt(m));const timer=window.setTimeout(()=>{if(switchAudio.current)switchAudio.current.pause();if(audioRef.current)audioRef.current.pause();if(soundCtx.current)void soundCtx.current.suspend();const a=new Audio(m.url);switchAudio.current=a;a.volume=Math.min(1,m.volume/100);a.loop=true;const seek=()=>{try{a.currentTime=Math.min(m.offset,Math.max(0,(a.duration||m.seconds)-.1))}catch{}};a.addEventListener('loadedmetadata',seek,{once:true});seek();void a.play().catch(()=>setMusicError('切り替えBGMを再生できませんでした'))},at*1000);switchTimers.current.push(timer)} }
  setSceneKey(k=>k+1)
 }
+async function snapshotProject():Promise<StoredProject>{
+ const getBlob=async (url:string)=>{
+  const response=await fetch(url);
+  if(!response.ok)throw Error('素材を読み込めませんでした。');
+  return response.blob();
+ };
+ const [items,audio,switchFiles]=await Promise.all([
+  Promise.all(photos.map(async p=>({meta:{...p,url:undefined},blob:await getBlob(p.url)}))),
+  audioFile?getBlob(audioFile.url).then(blob=>({name:audioFile.name,seconds:audioFile.seconds,blob})):undefined,
+  Promise.all(musicSwitches.map(async m=>({id:m.id,blob:await getBlob(m.url)}))),
+ ]);
+ return {version:1,savedAt:new Date().toISOString(),photos:items,audio,switchFiles,settings:{title,ending,endingStyle,sticker,curtainColor,opening,mode,musicSeconds,duration,aspect,bgm,volume,bgmStart,bgmOffset,musicSwitches:musicSwitches.map(({url,...m})=>m),pauseBgmDuringVideo}};
+}
 async function saveProject(){
  if(!photos.length||draftBusy)return;setDraftBusy(true);setDraftInfo('保存中…');
  try{
-  const items=await Promise.all(photos.map(async p=>({meta:{...p,url:undefined},blob:await fetch(p.url).then(r=>r.blob())})));
-  const audio=audioFile?{name:audioFile.name,seconds:audioFile.seconds,blob:await fetch(audioFile.url).then(r=>r.blob())}:undefined;
-  const switchFiles=await Promise.all(musicSwitches.map(async m=>({id:m.id,blob:await fetch(m.url).then(r=>r.blob())})));
-  const savedAt=new Date().toISOString();
+  const draft=await snapshotProject();
   const targetId=projectId??id();
-  await persistProject(targetId,{version:1,savedAt,photos:items,audio,switchFiles,settings:{title,ending,endingStyle,sticker,curtainColor,opening,mode,musicSeconds,duration,aspect,bgm,volume,bgmStart,bgmOffset,musicSwitches:musicSwitches.map(({url,...m})=>m),pauseBgmDuringVideo}});
-  setProjectId(targetId);await refreshProjects();setDraftInfo('保存しました：'+new Date(savedAt).toLocaleString('ja-JP'));
+  await persistProject(targetId,draft);
+  setProjectId(targetId);await refreshProjects();setDraftInfo('保存しました：'+new Date(draft.savedAt).toLocaleString('ja-JP'));
  }catch(e){setDraftInfo('保存できませんでした。端末の空き容量やプライベートブラウズ設定をご確認ください。'+(e instanceof Error?' '+e.message:''))}
  finally{setDraftBusy(false)}
 }
-async function restoreProject(targetId:string){
- if(draftBusy)return;setDraftBusy(true);setDraftInfo('読み込み中…');
- try{
-  const draft=await loadProject(targetId);if(!draft){setDraftInfo('保存された作品がありません');return}
+function applyStoredProject(draft:StoredProject,targetId:string|null){
+ stopMusic();
   const next=draft.photos.map(p=>{
    const {frame: _frame,decoration: _decoration,...meta}=p.meta as Partial<Photo>&{frame?:string;decoration?:string};
    const isVideo=p.blob.type.startsWith('video/') || /\.(mov|mp4|m4v|webm)$/i.test(meta.name ?? '');
@@ -318,10 +332,84 @@ async function restoreProject(targetId:string){
   setTitle(v.title as string);setEnding(v.ending as string);setEndingStyle(v.endingStyle==='fuji_graduation'?'fuji_graduation':'message');setSticker(v.sticker as string);setCurtainColor((v.curtainColor as typeof curtainColor)||'red');setOpening((v.opening as typeof opening)||(v.theme==='theater'?'curtain':'fade'));setMode(v.mode as typeof mode);setMusicSeconds(v.musicSeconds as number);setDuration(v.duration as number);setAspect(v.aspect as typeof aspect);setBgm(v.bgm as typeof bgm);setVolume(v.volume as number);setBgmStart(Math.max(0,Number(v.bgmStart)||0));setBgmOffset(Math.max(0,Number(v.bgmOffset)||0));setPauseBgmDuringVideo(v.pauseBgmDuringVideo!==false);
   setMusicSwitches((Array.isArray(v.musicSwitches)?v.musicSwitches:[]).map((m:MusicSwitch)=>{const item=draft.switchFiles?.find(x=>x.id===m.id);return {...m,url:item?URL.createObjectURL(item.blob):''}}).filter((m:MusicSwitch)=>m.url));
   if(draft.audio){setAudioFile({name:draft.audio.name,seconds:draft.audio.seconds,url:URL.createObjectURL(draft.audio.blob)})}else setAudioFile(null);
-  setProjectId(targetId);setStep('edit');setImportNotice('');setDraftInfo('保存した作品を開きました');
+  setProjectId(targetId);setStep('edit');setImportNotice('');
+}
+async function restoreProject(targetId:string){
+ if(draftBusy)return;setDraftBusy(true);setDraftInfo('読み込み中…');
+ try{
+  const draft=await loadProject(targetId);if(!draft){setDraftInfo('保存された作品がありません');return}
+  applyStoredProject(draft,targetId);
+  setDraftInfo('保存した作品を開きました');
  }catch(e){setDraftInfo('読み込めませんでした。'+(e instanceof Error?' '+e.message:''))}
  finally{setDraftBusy(false)}
 }
+function sharedLink(token:string){
+ return window.location.origin+window.location.pathname+'#share='+token;
+}
+function leaveSharedProject(){
+ if(window.location.hash.startsWith('#share='))window.history.replaceState(null,'',window.location.pathname+window.location.search);
+ setShared(null);setShareNotice('');setShareConflict(false);pendingShareToken.current=null;
+}
+async function saveOnline(){
+ if(!photos.length||draftBusy||shareConflict)return;
+ if(!shared&&!pendingShareToken.current&&!window.confirm('作品の写真・動画・BGMをネットに保存します。共有リンクを知っている人は作品を開いて編集できます。保存しますか？'))return;
+ setDraftBusy(true);setShareNotice('共有先に保存しています…');
+ try{
+  const draft=await snapshotProject();
+  const token=shared?.token??pendingShareToken.current??newShareToken();
+  pendingShareToken.current=token;
+  let etag:string;
+  try {
+   etag=await saveSharedProject(token,shared?.etag??null,draft);
+  } catch(error) {
+   if(shared||!(error instanceof SharedProjectConflict))throw error;
+   const current=await loadSharedProject(token);
+   etag=await saveSharedProject(token,current.etag,draft);
+  }
+  setShared({token,etag});
+  window.history.replaceState(null,'',sharedLink(token));
+  setShareNotice('共有作品を保存しました。');
+ }catch(error){
+  setShareConflict(error instanceof SharedProjectConflict);
+  setShareNotice(error instanceof Error?error.message:'共有作品を保存できませんでした。');
+ }finally{setDraftBusy(false)}
+}
+async function reloadShared(){
+ if(!shared||draftBusy||!window.confirm('この画面の編集内容を、共有先の最新版に置き換えますか？'))return;
+ setDraftBusy(true);setShareNotice('共有作品を読み込み中…');
+ try {
+  const {project,etag}=await loadSharedProject(shared.token);
+  applyStoredProject(project,projectId);
+  setShared({...shared,etag});setShareConflict(false);
+  setShareNotice('共有先の最新版を開きました。');
+ }catch(error){setShareNotice(error instanceof Error?error.message:'共有作品を読み込めませんでした。')}
+ finally{setDraftBusy(false)}
+}
+async function copyShareLink(){
+ if(!shared)return;
+ try {
+  await navigator.clipboard.writeText(sharedLink(shared.token));
+  setShareNotice('共有リンクをコピーしました。');
+ }catch{
+  shareLinkField.current?.focus();shareLinkField.current?.select();
+  setShareNotice('選択した共有リンクをコピーしてください。');
+ }
+}
+useEffect(()=>{
+ let active=true;
+ const token=shareTokenFromHash(window.location.hash);
+ if(!token)return;
+ setDraftBusy(true);setDraftInfo('共有作品を読み込み中…');
+ void loadSharedProject(token).then(({project,etag})=>{
+  if(!active)return;
+  applyStoredProject(project,null);
+  setShared({token,etag});setEditPage('main');
+  setDraftInfo('');setShareNotice('共有作品を開きました。');
+ }).catch(error=>{
+  if(active)setDraftInfo(error instanceof Error?error.message:'共有作品を読み込めませんでした。');
+ }).finally(()=>{if(active)setDraftBusy(false)});
+ return()=>{active=false};
+},[]);
 async function eraseProject(targetId:string){
  if(!window.confirm('この作品の保存データを削除しますか？'))return;
  try{await deleteProject(targetId);if(projectId===targetId)setProjectId(null);await refreshProjects();setDraftInfo('作品を削除しました')}catch{setDraftInfo('削除できませんでした')}
@@ -329,7 +417,7 @@ async function eraseProject(targetId:string){
 async function copyProject(targetId:string){
  try{await duplicateProject(targetId,id());await refreshProjects();setDraftInfo('作品を複製しました')}catch{setDraftInfo('複製できませんでした')}
 }
-function newProject(){setPlaying(false);stopMusic();setPhotos([]);setProjectId(null);setSelected(0);setUndoStack([]);setRedoStack([]);setAudioFile(null);setMusicSwitches([]);setTitle('');setEndingStyle('message');setEnding('ありがとう、たくさんの思い出');setEditPage('opening');setStep('edit');setDraftInfo('')}
+function newProject(){leaveSharedProject();setPlaying(false);stopMusic();setPhotos([]);setProjectId(null);setSelected(0);setUndoStack([]);setRedoStack([]);setAudioFile(null);setMusicSwitches([]);setTitle('');setEndingStyle('message');setEnding('ありがとう、たくさんの思い出');setEditPage('opening');setStep('edit');setDraftInfo('')}
 
 async function makeMovie(){
  if(!photos.length||exporting)return;
@@ -362,7 +450,7 @@ useEffect(()=>{if(!playing)return;const isVideo=phase==='photos'&&photos[playInd
 
 
 return <main className={step==='home'?'theaterHome':'theaterEditor'}><header><img className="homeArtwork" src={import.meta.env.BASE_URL+'home_header.jpg'} alt="おもいでシアター" onLoad={e=>e.currentTarget.classList.add('loaded')}/><div className="homeCurtain left"/><div className="homeCurtain right"/><div className="brand"><span className="homeCamera">🎥</span>おもいでシアター</div><div className="subtitle">写真が、一本の映画になる。</div></header>
-{step==='home'?<section className="panel hero"><div className="stage"><img className="homeArtwork" src={import.meta.env.BASE_URL+'home_hero.jpg'} alt="思い出を映画に" onLoad={e=>e.currentTarget.classList.add('loaded')}/><span className="heroFlower top">🌸</span><span className="heroFlower bottom">🌸</span><span className="heroReel">🎞</span><span className="heroClap">🎬</span><h1>思い出を映画に</h1><p>写真や動画を選んで、自分だけのムービーを。</p></div><button className="primary" onClick={newProject}><img className="homeArtwork" src={import.meta.env.BASE_URL+'home_create.jpg'} alt="新しいムービーを作る" onLoad={e=>e.currentTarget.classList.add('loaded')}/>＋ 新しいムービーを作る <span aria-hidden="true">›</span></button>{projects.length>0?<div className="draftBox"><h3>📁 保存した作品（{projects.length}件）</h3><div className="projectList">{projects.map(p=><div className="projectCard" key={p.id}>{thumbUrls[p.id]?<img src={thumbUrls[p.id]} alt="作品の表紙"/>:<div className="projectFallback">🎬</div>}<div className="projectDetail"><strong>{p.title}</strong><small>{p.photoCount}枚 · {new Date(p.savedAt).toLocaleString('ja-JP')}</small><div className="projectButtons"><button onClick={()=>restoreProject(p.id)} disabled={draftBusy}>編集する</button><button onClick={()=>copyProject(p.id)} disabled={draftBusy}>複製</button><button onClick={()=>eraseProject(p.id)} disabled={draftBusy}>削除</button></div></div></div>)}</div></div>:null}{draftInfo?<p className="note" role="status">{draftInfo}</p>:null}<p className="note">試作版です。BGMの試聴に対応しました。動画の書き出しは試験機能として追加しました。</p></section>:null}
+{step==='home'?<section className="panel hero"><div className="stage"><img className="homeArtwork" src={import.meta.env.BASE_URL+'home_hero.jpg'} alt="思い出を映画に" onLoad={e=>e.currentTarget.classList.add('loaded')}/><span className="heroFlower top">🌸</span><span className="heroFlower bottom">🌸</span><span className="heroReel">🎞</span><span className="heroClap">🎬</span><h1>思い出を映画に</h1><p>写真や動画を選んで、自分だけのムービーを。</p></div><button className="primary" disabled={draftBusy} onClick={newProject}><img className="homeArtwork" src={import.meta.env.BASE_URL+'home_create.jpg'} alt="新しいムービーを作る" onLoad={e=>e.currentTarget.classList.add('loaded')}/>＋ 新しいムービーを作る <span aria-hidden="true">›</span></button>{projects.length>0?<div className="draftBox"><h3>📁 保存した作品（{projects.length}件）</h3><div className="projectList">{projects.map(p=><div className="projectCard" key={p.id}>{thumbUrls[p.id]?<img src={thumbUrls[p.id]} alt="作品の表紙"/>:<div className="projectFallback">🎬</div>}<div className="projectDetail"><strong>{p.title}</strong><small>{p.photoCount}枚 · {new Date(p.savedAt).toLocaleString('ja-JP')}</small><div className="projectButtons"><button onClick={()=>restoreProject(p.id)} disabled={draftBusy}>編集する</button><button onClick={()=>copyProject(p.id)} disabled={draftBusy}>複製</button><button onClick={()=>eraseProject(p.id)} disabled={draftBusy}>削除</button></div></div></div>)}</div></div>:null}{draftInfo?<p className="note" role="status">{draftInfo}</p>:null}<p className="note">試作版です。BGMの試聴に対応しました。動画の書き出しは試験機能として追加しました。</p></section>:null}
 {step==='edit'?<section className="panel"><div className="sectionHeading"><h2>ムービーを作成</h2></div><nav className="editSteps" aria-label="編集の手順">{([['opening','① オープニング'],['main','② 本編'],['ending','③ エンディング'],['finish','④ 完成・保存']] as const).map(([key,label])=><button key={key} className={editPage===key?'active':''} aria-current={editPage===key?'step':undefined} onClick={()=>{setPlaying(false);setEditPage(key)}}>{label}</button>)}</nav><section className="sharedPreview"><h3>{openingStill?'🎬 オープニングプレビュー':endingStill?'🌷 エンディングプレビュー':'🎥 全体プレビュー'}</h3><div className={'preview '+aspect}><div className={'previewFrame'+(openingStill?' openingStill':'')}>
 {playing&&phase==='photos'&&transitionEffect==='page'&&photos.length>0&&((playIndex===0&&opening==='album')||photos[playIndex-1])?<div key={'turn-'+sceneKey} className="albumFullPageTurn" aria-hidden="true">{playIndex===0?<div className="albumTurnTitlePage"><span>{title}</span></div>:<div className="albumTurnPreviousPage"><div className="albumTurnPhotoClip">{photos[playIndex-1].kind==='video'?<div className="albumTurnVideoPlaceholder">🎞️</div>:<img src={photos[playIndex-1].url} alt="" style={{transform:'scale('+(photos[playIndex-1].zoom??1)+') translate('+(photos[playIndex-1].offsetX??0)+'%,'+(photos[playIndex-1].offsetY??0)+'%)'}}/>}</div>{photos[playIndex-1].caption?<div className="albumTurnCaption" style={{left:(photos[playIndex-1].captionX??50)+'%',top:(photos[playIndex-1].captionY??83)+'%',fontFamily:photos[playIndex-1].captionFont==='cursive'?'Yomogi, cursive':photos[playIndex-1].captionFont??'sans-serif',fontSize:(photos[playIndex-1].captionSize??22)+'px',fontWeight:photos[playIndex-1].captionWeight??700,color:photos[playIndex-1].captionColor??'#fff',background:photos[playIndex-1].captionBackground?'rgba(0,0,0,.58)':'transparent'}}>{photos[playIndex-1].caption}</div>:null}</div>}</div>:null}
 {showOpening&&opening==='album'?<div className="albumCustomTitle"><span>{title}</span></div>:null}
@@ -389,7 +477,17 @@ return <main className={step==='home'?'theaterHome':'theaterEditor'}><header><im
  <input type="file" accept="video/*,.mov,.mp4,.m4v,.webm" multiple disabled={importing||draftBusy} onChange={importSelectedMedia}/>
 </label>
 </div><p className="note" role="status" hidden={!importNotice}>{importNotice}</p>{photos.length>0?<div className="actions"><button onClick={startPreview}>{playing?'■ 停止':'▶ 最初から再生'}</button>{playing&&phase==='photos'&&activePhoto?.kind==='video'&&activePhoto.keepAudio!==false?<button onClick={()=>{setPreviewSound(v=>!v);const el=previewVideo.current;if(el){el.muted=previewSound;void el.play().catch(()=>{})}}}>{previewSound?'🔊 動画音声ON':'🔇 動画音声をON'}</button>:null}</div>:null}
-<div className="actions" role="group" aria-label="途中保存"><button onClick={saveProject} disabled={draftBusy||importing}>{draftBusy?'処理中…':'途中保存'}</button>{projectId?<button onClick={()=>restoreProject(projectId)} disabled={draftBusy||importing}>保存した状態に戻す</button>:null}</div>{draftInfo?<p className="note" role="status">{draftInfo}</p>:null}
+<div className="actions" role="group" aria-label="途中保存"><button onClick={saveProject} disabled={draftBusy||importing}>{draftBusy?'処理中…':'途中保存'}</button>{projectId?<button onClick={()=>restoreProject(projectId)} disabled={draftBusy||importing}>保存した状態に戻す</button>:null}
+<button disabled={!photos.length||importing||draftBusy||shareConflict} onClick={saveOnline}>{shared?'共有作品を保存':'ネットに保存して共有'}</button>
+</div>
+{shared?<div className="shareBox">
+ <label>共有リンク<input ref={shareLinkField} type="text" value={sharedLink(shared.token)} readOnly onFocus={e=>e.currentTarget.select()}/></label>
+ <div className="actions"><button onClick={copyShareLink}>共有リンクをコピー</button><button disabled={draftBusy||importing} onClick={reloadShared}>共有先の最新版を開く</button></div>
+ <p className="note">リンクを知っている人は、写真や動画を見て作品を編集できます。</p>
+</div>:null}
+{shareNotice?<p className="note" role="status">{shareNotice}</p>:null}
+{shareConflict?<p className="note">手元の編集を残すには「途中保存」を押してから、共有先の最新版を開いてください。</p>:null}
+{draftInfo?<p className="note" role="status">{draftInfo}</p>:null}
 </section>{editPage==='main'?<><p className="note">カーテン・写真のフェード／ズーム／スライドを画面で確認できます。BGMは試聴用です。動画の書き出しは下の試験機能で確認できます。</p><h3>写真の並び順</h3><div className="strip">{photos.map((p,i)=><button key={p.id} className={'thumb '+(selected===i?'selected':'')} onClick={()=>{setSelected(i);setPlaying(false);setPhase('intro');setSceneKey(k=>k+1)}}>{p.kind==='video'?<VideoThumbnail url={p.url} name={p.name}/>:<img src={p.url} alt={p.name}/>}<span>{i+1}</span></button>)}</div>{current&&<div className="editor"><h3>選択中の{current.kind==='video'?'動画':'写真'}：{selected+1}番目</h3><div className="photoToolGrid">{([['text','T','文字'],['subtitles','▤','字幕'],['sticker','☺','スタンプ'],['transition','⇄','切り替え'],['duration','◷','表示時間'],['position','⛶','拡大・移動'],['apply','▢','一括適用']] as const).map(([key,icon,label])=><button key={key} className={editTool===key?'chosen':''} onClick={()=>{if(key==='transition')setTransitionChoice(current.effect);setEditTool(editTool===key?null:key)}}><span>{icon}</span><small>{label}</small></button>)}</div>
 {editTool?<div className="photoToolPanel">
 {editTool==='subtitles'?<div className="subtitleEditor"><h4>字幕（この写真・動画）</h4><label>表示を確認する位置：{subtitleTime.toFixed(1)}秒<input type="range" min="0" max={Math.max(1,current.duration)} step="0.1" value={Math.min(subtitleTime,current.duration)} onChange={e=>setSubtitleTime(Number(e.target.value))}/></label>{(current.subtitles??[]).map(c=><div className="subtitleCue" key={c.id}><label>字幕<input value={c.text} placeholder="字幕を入力" onChange={e=>update(selected,{subtitles:(current.subtitles??[]).map(x=>x.id===c.id?{...x,text:e.target.value}:x)})}/></label><div className="subtitleTimes"><label>開始（秒）<input type="number" min="0" max={current.duration} step="0.1" value={c.start} onChange={e=>update(selected,{subtitles:(current.subtitles??[]).map(x=>x.id===c.id?{...x,start:Math.min(current.duration,Math.max(0,Number(e.target.value)))}:x)})}/></label><label>終了（秒）<input type="number" min="0" max={current.duration} step="0.1" value={c.end} onChange={e=>update(selected,{subtitles:(current.subtitles??[]).map(x=>x.id===c.id?{...x,end:Math.min(current.duration,Math.max(0,Number(e.target.value)))}:x)})}/></label></div><button className="small" onClick={()=>update(selected,{subtitles:(current.subtitles??[]).filter(x=>x.id!==c.id)})}>この字幕を削除</button></div>)}<button onClick={()=>{const start=Math.min(Math.max(0,subtitleTime),Math.max(0,current.duration-1));update(selected,{subtitles:[...(current.subtitles??[]),{id:id(),text:'',start:Math.round(start*10)/10,end:Math.min(current.duration,Math.round((start+3)*10)/10)}]})}}>＋ 字幕を追加</button><label>字幕の色<input type="color" value={current.subtitleColor??'#ffffff'} onChange={e=>update(selected,{subtitleColor:e.target.value})}/></label><label>字幕サイズ：{current.subtitleSize??22}px<input type="range" min="12" max="42" value={current.subtitleSize??22} onChange={e=>update(selected,{subtitleSize:Number(e.target.value)})}/></label><label>縁取り色<input type="color" value={current.subtitleOutline??'#202020'} onChange={e=>update(selected,{subtitleOutline:e.target.value})}/></label></div>:null}
@@ -441,7 +539,7 @@ return <main className={step==='home'?'theaterHome':'theaterEditor'}><header><im
 </div><p className="note">{/Android/i.test(navigator.userAgent)
  ? 'ダウンロードした動画は、ブラウザの「ダウンロード」から開けます。'
  : '共有メニューに「ビデオを保存」が表示される場合は、写真アプリにも保存できます。'}</p></div>:null}
-</section><div className="editPageActions"><button onClick={()=>setEditPage('ending')}>← エンディング</button></div></>:null}<button className="secondary" disabled={importing} onClick={()=>{setImportNotice('');setStep('home')}}>ホームに戻る</button></section>:null}
+</section><div className="editPageActions"><button onClick={()=>setEditPage('ending')}>← エンディング</button></div></>:null}<button className="secondary" disabled={importing||draftBusy} onClick={()=>{leaveSharedProject();setImportNotice('');setStep('home')}}>ホームに戻る</button></section>:null}
 <input ref={switchInput} type="file" accept="audio/*,.mp3,.m4a,.wav,.aac" hidden onChange={e=>{void addMusicSwitch(e.target.files);e.target.value=''}}/><input ref={musicInput} type="file" accept="audio/*,.mp3,.m4a,.wav,.aac" hidden onChange={e=>{importMusic(e.target.files);e.target.value=''}}/>
-<footer>おもいでシアター · 試作版 v8.14</footer></main>
+<footer>おもいでシアター · 試作版 v8.15</footer></main>
 }
