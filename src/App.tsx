@@ -484,7 +484,9 @@ return <main className={step==='home'?'theaterHome':'theaterEditor'}><header><im
  <label>共有リンク<input ref={shareLinkField} type="text" value={sharedLink(shared.token)} readOnly onFocus={e=>e.currentTarget.select()}/></label>
  <div className="actions"><button onClick={copyShareLink}>共有リンクをコピー</button><button disabled={draftBusy||importing} onClick={reloadShared}>共有先の最新版を開く</button></div>
  <p className="note">リンクを知っている人は、写真や動画を見て作品を編集できます。</p>
- <p className="note">きく組の提出一覧から素材を取り込むときは、「共有作品に追加」にこのリンクを貼り付けます。</p>
+ <div className="actions">
+  <a className="downloadLink" target="_blank" rel="noreferrer" href={'https://kiku-sotsuen-movie.th-1043.chatgpt.site/manage#project='+shared.token}>きく組の提出データを追加</a>
+ </div>
 </div>:null}
 {shareNotice?<p className="note" role="status">{shareNotice}</p>:null}
 {shareConflict?<p className="note">手元の編集を残すには「途中保存」を押してから、共有先の最新版を開いてください。</p>:null}
@@ -542,5 +544,5 @@ return <main className={step==='home'?'theaterHome':'theaterEditor'}><header><im
  : '共有メニューに「ビデオを保存」が表示される場合は、写真アプリにも保存できます。'}</p></div>:null}
 </section><div className="editPageActions"><button onClick={()=>setEditPage('ending')}>← エンディング</button></div></>:null}<button className="secondary" disabled={importing||draftBusy} onClick={()=>{leaveSharedProject();setImportNotice('');setStep('home')}}>ホームに戻る</button></section>:null}
 <input ref={switchInput} type="file" accept="audio/*,.mp3,.m4a,.wav,.aac" hidden onChange={e=>{void addMusicSwitch(e.target.files);e.target.value=''}}/><input ref={musicInput} type="file" accept="audio/*,.mp3,.m4a,.wav,.aac" hidden onChange={e=>{importMusic(e.target.files);e.target.value=''}}/>
-<footer>おもいでシアター · 試作版 v8.16</footer></main>
+<footer>おもいでシアター · 試作版 v8.17</footer></main>
 }
