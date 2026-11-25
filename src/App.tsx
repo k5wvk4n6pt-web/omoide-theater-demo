@@ -351,7 +351,7 @@ function leaveSharedProject(){
  setShared(null);setShareNotice('');setShareConflict(false);pendingShareToken.current=null;
 }
 async function saveOnline(){
- if(!photos.length||draftBusy||shareConflict)return;
+ if(draftBusy||shareConflict)return;
  if(!shared&&!pendingShareToken.current&&!window.confirm('作品の写真・動画・BGMをネットに保存します。共有リンクを知っている人は作品を開いて編集できます。保存しますか？'))return;
  setDraftBusy(true);setShareNotice('共有先に保存しています…');
  try{
@@ -478,12 +478,13 @@ return <main className={step==='home'?'theaterHome':'theaterEditor'}><header><im
 </label>
 </div><p className="note" role="status" hidden={!importNotice}>{importNotice}</p>{photos.length>0?<div className="actions"><button onClick={startPreview}>{playing?'■ 停止':'▶ 最初から再生'}</button>{playing&&phase==='photos'&&activePhoto?.kind==='video'&&activePhoto.keepAudio!==false?<button onClick={()=>{setPreviewSound(v=>!v);const el=previewVideo.current;if(el){el.muted=previewSound;void el.play().catch(()=>{})}}}>{previewSound?'🔊 動画音声ON':'🔇 動画音声をON'}</button>:null}</div>:null}
 <div className="actions" role="group" aria-label="途中保存"><button onClick={saveProject} disabled={draftBusy||importing}>{draftBusy?'処理中…':'途中保存'}</button>{projectId?<button onClick={()=>restoreProject(projectId)} disabled={draftBusy||importing}>保存した状態に戻す</button>:null}
-<button disabled={!photos.length||importing||draftBusy||shareConflict} onClick={saveOnline}>{shared?'共有作品を保存':'ネットに保存して共有'}</button>
+<button disabled={importing||draftBusy||shareConflict} onClick={saveOnline}>{shared?'共有作品を保存':'ネットに保存して共有'}</button>
 </div>
 {shared?<div className="shareBox">
  <label>共有リンク<input ref={shareLinkField} type="text" value={sharedLink(shared.token)} readOnly onFocus={e=>e.currentTarget.select()}/></label>
  <div className="actions"><button onClick={copyShareLink}>共有リンクをコピー</button><button disabled={draftBusy||importing} onClick={reloadShared}>共有先の最新版を開く</button></div>
  <p className="note">リンクを知っている人は、写真や動画を見て作品を編集できます。</p>
+ <p className="note">きく組の提出一覧から素材を取り込むときは、「共有作品に追加」にこのリンクを貼り付けます。</p>
 </div>:null}
 {shareNotice?<p className="note" role="status">{shareNotice}</p>:null}
 {shareConflict?<p className="note">手元の編集を残すには「途中保存」を押してから、共有先の最新版を開いてください。</p>:null}
@@ -541,5 +542,5 @@ return <main className={step==='home'?'theaterHome':'theaterEditor'}><header><im
  : '共有メニューに「ビデオを保存」が表示される場合は、写真アプリにも保存できます。'}</p></div>:null}
 </section><div className="editPageActions"><button onClick={()=>setEditPage('ending')}>← エンディング</button></div></>:null}<button className="secondary" disabled={importing||draftBusy} onClick={()=>{leaveSharedProject();setImportNotice('');setStep('home')}}>ホームに戻る</button></section>:null}
 <input ref={switchInput} type="file" accept="audio/*,.mp3,.m4a,.wav,.aac" hidden onChange={e=>{void addMusicSwitch(e.target.files);e.target.value=''}}/><input ref={musicInput} type="file" accept="audio/*,.mp3,.m4a,.wav,.aac" hidden onChange={e=>{importMusic(e.target.files);e.target.value=''}}/>
-<footer>おもいでシアター · 試作版 v8.15</footer></main>
+<footer>おもいでシアター · 試作版 v8.16</footer></main>
 }

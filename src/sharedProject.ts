@@ -62,7 +62,7 @@ export async function decodeProject(blob: Blob): Promise<StoredProject> {
  try { header = JSON.parse(await blob.slice(16, offset).text()); }
  catch { throw fail(); }
  if (!validRecord(header) || header.version !== 1 || typeof header.savedAt !== 'string' || !validRecord(header.settings) ||
-     !Array.isArray(header.photos) || !header.photos.length || !Array.isArray(header.switchFiles)) throw fail();
+     !Array.isArray(header.photos) || !Array.isArray(header.switchFiles)) throw fail();
  const settings = header.settings;
  if (typeof settings.title !== 'string' || typeof settings.ending !== 'string' ||
      !['duration','musicSeconds','volume','bgmStart','bgmOffset'].every(key => Number.isFinite(settings[key])) ||
