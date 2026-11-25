@@ -263,3 +263,51 @@ input[type="file"][hidden]{display:none!important}
 .openingStill .openingPhotoParticles { display: none; }
 .openingStill .countdownThree { opacity: 1; }
 .endingScreen.endingStill { animation: none; }
+
+.actions .mediaPicker {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 44px;
+  display: grid;
+  place-items: center;
+  margin: 0;
+  padding: 11px 14px;
+  border: 1px solid #dcd5dd;
+  border-radius: 12px;
+  background: #fff;
+  color: #372b3b;
+  text-align: center;
+  overflow: hidden;
+  cursor: pointer;
+}
+.actions .mediaPicker.primary {
+  flex-basis: 100%;
+  padding: 16px;
+  font-weight: 700;
+  border: 2px solid #d5a575;
+  border-radius: 28px;
+  background: linear-gradient(#bc4268, #a52d55);
+  box-shadow: inset 0 0 0 1px #ffffff50, 0 3px 8px #9f615a30;
+  color: #fff;
+}
+.mediaPicker input[type="file"] {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.mediaPicker input::-webkit-file-upload-button {
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+}
+.mediaPicker input::file-selector-button {
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+}
+.mediaPicker:focus-within { outline: 2px solid #873859; outline-offset: 2px; }
+.mediaPicker:has(input:disabled) { opacity: .5; cursor: default; }
