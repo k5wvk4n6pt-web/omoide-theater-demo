@@ -6,8 +6,6 @@ import type {ProjectSummary} from './draftStore';
 type SubtitleCue={id:string;text:string;start:number;end:number};
 type MusicSwitch={id:string;name:string;url:string;seconds:number;start:number;anchor:'time'|'photo';photoId?:string;offset:number;volume:number;fade:number};
 type Photo={subtitles?:SubtitleCue[];subtitleColor?:string;subtitleSize?:number;subtitleOutline?:string;trimStart?:number;sourceDuration?:number;keepAudio?:boolean;kind?:'image'|'video';id:string;name:string;url:string;duration:number;effect:'fade'|'zoom'|'slide'|'page'|'heart'|'curtain'|'none'|'wipe'|'slideUp'|'circle'|'blinds'|'flash'|'blur'|'mosaic'|'random';sticker?:string;caption?:string;zoom?:number;offsetX?:number;offsetY?:number;captionX?:number;captionY?:number;captionFont?:string;captionColor?:string;captionSize?:number;captionWeight?:number;captionOutline?:boolean;captionOutlineColor?:string;captionBackground?:boolean;captionMotion?:'none'|'fade'|'rise'|'slide'};
-type Theme='theater'|'album'|'sakura'|'sparkle';
-const themes:{id:Theme;name:string;emoji:string;description:string}[]=[{id:'theater',name:'シアター',emoji:'🎭',description:'赤いカーテン'},{id:'album',name:'アルバム',emoji:'📖',description:'懐かしい思い出'},{id:'sakura',name:'さくら',emoji:'🌸',description:'卒園・卒業'},{id:'sparkle',name:'キラキラ',emoji:'✨',description:'誕生日・お祝い'}];
 const id=()=>Math.random().toString(36).slice(2);
 function VideoThumbnail({url,name}:{url:string;name:string}){
  const [poster,setPoster]=useState<string|null>(null);
@@ -46,14 +44,12 @@ const [thumbUrls,setThumbUrls]=useState<Record<string,string>>({});
 const thumbRef=useRef<Record<string,string>>({});
 async function refreshProjects(){const list=await listProjects();setProjects(list);Object.values(thumbRef.current).forEach(url=>URL.revokeObjectURL(url));const urls:Record<string,string>={};list.forEach(p=>{if(p.thumbnail)urls[p.id]=URL.createObjectURL(p.thumbnail)});thumbRef.current=urls;setThumbUrls(urls)}
 
-const [theme,setTheme]=useState<Theme>('theater');
 const [title,setTitle]=useState('');
 const [endingStyle,setEndingStyle]=useState<'message'|'fuji_graduation'>('message');
 const [ending,setEnding]=useState('ありがとう、たくさんの思い出');
 const [sticker,setSticker]=useState('none');
 const [curtainColor,setCurtainColor]=useState<'red'|'pink'|'navy'|'gold'>('red');
 const [opening,setOpening]=useState<'curtain'|'sparkle'|'sakura'|'album'|'countdown'|'rainbow'|'fade'|'gold_light'|'floral_wedding'|'sakura_tunnel'|'balloon_party'|'starry_story'|'retro_cinema'|'fuji_graduation'>('curtain');
-const [template,setTemplate]=useState('custom');
 const [step,setStep]=useState<'home'|'edit'>('home');
 const [selected,setSelected]=useState(0);
 const [transitionScope,setTransitionScope]=useState<'one'|'all'|'chosen'>('one');
@@ -198,7 +194,6 @@ const transitionEffect=activePhoto?.effect==='random'?['fade','wipe','circle','s
 const activeDuration=computed[playing?playIndex:selected]||duration;
 const activeSubtitle=activePhoto?.subtitles?.find(c=>subtitleTime>=c.start&&subtitleTime<c.end);
 const shownSticker=activePhoto?.sticker??sticker;
-function applyTemplate(t:string){setTemplate(t);const presets:Record<string,{theme:Theme;title:string;ending:string}>={graduation:{theme:'sakura',title:'卒園おめでとう',ending:'たくさんの思い出をありがとう'},wedding:{theme:'sparkle',title:'Wedding Story',ending:'いつまでもお幸せに'},birthday:{theme:'sparkle',title:'Happy Birthday',ending:'笑顔あふれる一年に'},travel:{theme:'album',title:'旅の思い出',ending:'また一緒に旅しよう'},growth:{theme:'album',title:'成長の記録',ending:'これからも元気に大きくなってね'},theater:{theme:'theater',title:'大切な思い出',ending:'Fin.'}};const p=presets[t];if(p){setTheme(p.theme);setTitle(p.title);setEnding(p.ending)}}
 const symbols:Record<string,string>={bear:'🧸',rabbit:'🐰',camera:'📷',clapper:'🎬',bouquet:'💐',crown:'👑',graduation:'🎓',diploma:'📜',cake:'🎂',gift:'🎁',balloons:'🎈',rainbow:'🌈',star:'⭐',heart:'💗',music:'🎵',treble:'🎼',sparkles:'✨'};
 
 function stopMusic(clearSwitches=true){
@@ -250,7 +245,7 @@ async function saveProject(){
   const switchFiles=await Promise.all(musicSwitches.map(async m=>({id:m.id,blob:await fetch(m.url).then(r=>r.blob())})));
   const savedAt=new Date().toISOString();
   const targetId=projectId??id();
-  await persistProject(targetId,{version:1,savedAt,photos:items,audio,switchFiles,settings:{theme,title,ending,endingStyle,sticker,curtainColor,opening,template,mode,musicSeconds,duration,aspect,bgm,volume,bgmStart,bgmOffset,musicSwitches:musicSwitches.map(({url,...m})=>m),pauseBgmDuringVideo}});
+  await persistProject(targetId,{version:1,savedAt,photos:items,audio,switchFiles,settings:{title,ending,endingStyle,sticker,curtainColor,opening,mode,musicSeconds,duration,aspect,bgm,volume,bgmStart,bgmOffset,musicSwitches:musicSwitches.map(({url,...m})=>m),pauseBgmDuringVideo}});
   setProjectId(targetId);await refreshProjects();setDraftInfo('保存しました：'+new Date(savedAt).toLocaleString('ja-JP'));
  }catch(e){setDraftInfo('保存できませんでした。端末の空き容量やプライベートブラウズ設定をご確認ください。'+(e instanceof Error?' '+e.message:''))}
  finally{setDraftBusy(false)}
@@ -266,7 +261,7 @@ async function restoreProject(targetId:string){
   });
   photosRef.current.forEach(p=>URL.revokeObjectURL(p.url));setPhotos(next);setSelected(0);setUndoStack([]);setRedoStack([]);setPlaying(false);
   const v=draft.settings;
-  setTheme(v.theme as Theme);setTitle(v.title as string);setEnding(v.ending as string);setEndingStyle(v.endingStyle==='fuji_graduation'?'fuji_graduation':'message');setSticker(v.sticker as string);setCurtainColor((v.curtainColor as typeof curtainColor)||'red');setOpening((v.opening as typeof opening)||(v.theme==='theater'?'curtain':'fade'));setTemplate(v.template as string);setMode(v.mode as typeof mode);setMusicSeconds(v.musicSeconds as number);setDuration(v.duration as number);setAspect(v.aspect as typeof aspect);setBgm(v.bgm as typeof bgm);setVolume(v.volume as number);setBgmStart(Math.max(0,Number(v.bgmStart)||0));setBgmOffset(Math.max(0,Number(v.bgmOffset)||0));setPauseBgmDuringVideo(v.pauseBgmDuringVideo!==false);
+  setTitle(v.title as string);setEnding(v.ending as string);setEndingStyle(v.endingStyle==='fuji_graduation'?'fuji_graduation':'message');setSticker(v.sticker as string);setCurtainColor((v.curtainColor as typeof curtainColor)||'red');setOpening((v.opening as typeof opening)||(v.theme==='theater'?'curtain':'fade'));setMode(v.mode as typeof mode);setMusicSeconds(v.musicSeconds as number);setDuration(v.duration as number);setAspect(v.aspect as typeof aspect);setBgm(v.bgm as typeof bgm);setVolume(v.volume as number);setBgmStart(Math.max(0,Number(v.bgmStart)||0));setBgmOffset(Math.max(0,Number(v.bgmOffset)||0));setPauseBgmDuringVideo(v.pauseBgmDuringVideo!==false);
   setMusicSwitches((Array.isArray(v.musicSwitches)?v.musicSwitches:[]).map((m:MusicSwitch)=>{const item=draft.switchFiles?.find(x=>x.id===m.id);return {...m,url:item?URL.createObjectURL(item.blob):''}}).filter((m:MusicSwitch)=>m.url));
   if(draft.audio){setAudioFile({name:draft.audio.name,seconds:draft.audio.seconds,url:URL.createObjectURL(draft.audio.blob)})}else setAudioFile(null);
   setProjectId(targetId);setStep('edit');setDraftInfo('保存した作品を開きました');
@@ -286,7 +281,7 @@ async function makeMovie(){
  if(!photos.length||exporting)return;
  setPlaying(false);stopMusic();setExportError('');setExportProgress(0);setExporting(true);
  try{
-  const {blob,extension}=await exportMovie({photos:photos.map(p=>({...p,sticker:p.sticker??sticker})),durations:computed,title,ending,endingStyle,sticker,curtainColor,opening,theme,aspect,bgm,audioUrl:audioFile?.url,volume,bgmStart,bgmOffset,musicSwitches:orderedSwitches.map(m=>({...m,start:switchAt(m)})),pauseBgmDuringVideo,onProgress:setExportProgress});
+  const {blob,extension}=await exportMovie({photos:photos.map(p=>({...p,sticker:p.sticker??sticker})),durations:computed,title,ending,endingStyle,sticker,curtainColor,opening,aspect,bgm,audioUrl:audioFile?.url,volume,bgmStart,bgmOffset,musicSwitches:orderedSwitches.map(m=>({...m,start:switchAt(m)})),pauseBgmDuringVideo,onProgress:setExportProgress});
   if(exportUrl.current)URL.revokeObjectURL(exportUrl.current);
   const url=URL.createObjectURL(blob);exportUrl.current=url;
   setExportResult({url,name:'omoide-theater.'+extension,blob});
@@ -344,8 +339,6 @@ return <main className={step==='home'?'theaterHome':'theaterEditor'}><header><im
 </div>:null}
 <div className="actions"><button disabled={!undoStack.length} onClick={undo}>↶ 取り消し</button><button disabled={!redoStack.length} onClick={redo}>↷ やり直し</button></div>
 <div className="actions"><button disabled={selected===0} onClick={()=>move(selected,-1)}>← 前へ</button><button disabled={selected===photos.length-1} onClick={()=>move(selected,1)}>後ろへ →</button><button className="danger" onClick={()=>remove(selected)}>削除</button></div><label>演出<select value={current.effect} onChange={e=>update(selected,{effect:e.target.value as Photo['effect']})}><option value="zoom">ゆっくりズーム</option><option value="fade">フェード</option><option value="slide">スライド</option><option value="page">ページめくり</option><option value="heart">ハート</option><option value="curtain">カーテン</option><option value="none">切り替えなし</option><option value="wipe">ワイプ</option><option value="slideUp">上へスライド</option><option value="circle">円形</option><option value="blinds">ブラインド</option><option value="flash">光</option><option value="blur">ぼかし</option><option value="mosaic">モザイク</option><option value="random">ランダム</option></select></label>{mode==='photo'&&current.kind!=='video'&&<label>表示時間：{current.duration}秒<input type="range" min="2" max="15" value={current.duration} onChange={e=>update(selected,{duration:Number(e.target.value)})}/></label>}</div>}<div className="editPageActions"><button onClick={()=>setEditPage('opening')}>← オープニング</button><button className="primary" onClick={()=>setEditPage('ending')}>次へ：エンディング →</button></div></>:null}{editPage==='opening'?<><section className="designBox"><h3>🎬 オープニング作成</h3>
-<label>用途別テンプレート<select value={template} onChange={e=>applyTemplate(e.target.value)}>
-<option value="custom">自分で組み合わせる</option><option value="graduation">🌸 卒園・入学</option><option value="wedding">💍 ウェディング</option><option value="birthday">🎂 誕生日</option><option value="travel">🏝️ 旅行</option><option value="growth">👣 成長記録</option><option value="theater">🎬 シアター</option></select></label>
 <label>オープニング演出<select value={opening} onChange={e=>setOpening(e.target.value as typeof opening)}><option value="curtain">🎭 カーテン</option><option value="fuji_graduation">🌸 令和9年 卒園式（ふじほいくえん）</option><option value="sparkle">✨ キラキラ登場</option><option value="sakura">🌸 桜の舞</option><option value="album">📖 アルバムが開く</option><option value="countdown">🎞️ 映画カウントダウン</option><option value="rainbow">🌈 虹と雲</option><option value="fade">✧ シンプルフェード</option><optgroup label="✨ 写真背景のオープニング"><option value="gold_light">✨ ゴールドの光</option><option value="floral_wedding">💐 フラワーウェディング</option><option value="sakura_tunnel">🌸 桜のトンネル</option><option value="balloon_party">🎈 バルーンパーティー</option><option value="starry_story">🌙 星空の物語</option><option value="retro_cinema">🎞️ レトロ映画</option></optgroup></select></label>
 {opening==='curtain'?<label>カーテンの色<select value={curtainColor} onChange={e=>setCurtainColor(e.target.value as typeof curtainColor)}><option value="red">クラシック（赤）</option><option value="pink">パステル（ピンク）</option><option value="navy">ナイト（紺）</option><option value="gold">ゴールド</option></select></label>:null}
 {opening==='album'?<p className="note">📖 本編の切り替えは素材ごとに選択できます。</p>:null}
@@ -387,5 +380,5 @@ return <main className={step==='home'?'theaterHome':'theaterEditor'}><header><im
 </section><div className="editPageActions"><button onClick={()=>setEditPage('ending')}>← エンディング</button></div></>:null}<button className="secondary" onClick={()=>setStep('home')}>ホームに戻る</button></section>:null}
 <input ref={switchInput} type="file" accept="audio/*,.mp3,.m4a,.wav,.aac" hidden onChange={e=>{void addMusicSwitch(e.target.files);e.target.value=''}}/><input ref={musicInput} type="file" accept="audio/*,.mp3,.m4a,.wav,.aac" hidden onChange={e=>{importMusic(e.target.files);e.target.value=''}}/>
 <input ref={input} type="file" accept="image/*" multiple hidden onChange={e=>{void addPhotos(e.target.files);e.target.value=''}}/><input ref={videoInput} type="file" accept="video/*,.mov,.mp4,.m4v" multiple hidden onChange={e=>{void addPhotos(e.target.files);e.target.value=''}}/>
-<footer>おもいでシアター · 試作版 v8.8</footer></main>
+<footer>おもいでシアター · 試作版 v8.9</footer></main>
 }
