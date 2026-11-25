@@ -1,7 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Yomogi&family=Zen+Kurenaido&display=swap');
-:root{font-family:-apple-system,BlinkMacSystemFont,"Hiragino Kaku Gothic ProN",sans-serif;color:#342b37;background:#f8f4f0;font-synthesis:none}*{box-sizing:border-box}body{margin:0}main{max-width:700px;margin:auto;padding:0 16px 40px}header{text-align:center;background:#261b31;color:#fff;padding:28px 12px;border-radius:0 0 22px 22px;margin:0 -16px 22px}.brand{font-size:25px;font-weight:800;letter-spacing:.04em}.subtitle{font-size:12px;color:#e6d5c4;margin-top:6px}.panel{background:#fff;border-radius:20px;padding:20px;box-shadow:0 5px 25px #30213912;margin-bottom:20px}.hero{text-align:center}.stage{background:linear-gradient(135deg,#452438,#7b3048 50%,#392337);border-radius:16px;padding:35px 10px;color:white}.stage h1{font-size:25px}.stage p{font-size:13px;color:#f5dfe3}button{border:1px solid #dcd5dd;background:#fff;color:#372b3b;padding:11px 14px;border-radius:12px;font-size:14px;cursor:pointer}button:disabled{opacity:.4}button.primary{display:block;width:100%;margin:18px 0 8px;background:#8a3f62;color:#fff;border:0;font-weight:700;padding:16px}button.secondary{margin-top:12px;width:100%}button.small{font-size:12px;padding:7px 10px}.note{color:#8b8290;font-size:12px;line-height:1.6}h2{font-size:19px;margin:4px 0 18px}h3{font-size:15px;margin:20px 0 10px}.themeGrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px}.theme{display:flex;flex-direction:column;gap:6px;align-items:center}.theme span{font-size:32px}.theme small{color:#817885}.theme.active{border:2px solid #9e5277;background:#fff4f8}label{display:block;font-size:14px;margin:16px 0}input:not([type=radio]):not([type=range]),select{display:block;width:100%;border:1px solid #ded8df;border-radius:10px;padding:12px;margin-top:7px;font-size:16px;background:white}input[type=range]{display:block;width:100%;accent-color:#9e5277;margin-top:12px}.sectionHeading{display:flex;align-items:center;justify-content:space-between}.preview{margin:auto;background:#251b2d;border-radius:12px;overflow:hidden;max-width:100%}.preview.wide{aspect-ratio:16/9}.preview.vertical{aspect-ratio:9/16;max-width:230px}.previewFrame{width:100%;height:100%;position:relative;display:flex;align-items:center;justify-content:center;color:#fff}.previewFrame img{width:100%;height:100%;object-fit:contain}.previewFrame.theater{background:linear-gradient(90deg,#540e25,#1a101e 22%,#1a101e 78%,#540e25)}.previewFrame.album{background:#8d725b}.previewFrame.sakura{background:#eab9c9}.previewFrame.sparkle{background:#241e44}.previewTitle{position:absolute;bottom:8px;left:0;right:0;text-align:center;color:#fff;text-shadow:0 1px 5px #000;font-weight:700}.actions{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0}.strip{display:flex;gap:8px;overflow-x:auto;padding:6px 0}.thumb{min-width:74px;width:74px;height:74px;padding:3px;position:relative}.thumb.selected{border:2px solid #9e5277}.thumb img{width:100%;height:100%;object-fit:cover;border-radius:8px}.thumb span{position:absolute;bottom:3px;right:5px;background:#261b31;color:#fff;padding:1px 5px;border-radius:6px;font-size:10px}.editor{background:#faf7fa;padding:12px;border-radius:12px}.danger{color:#b23a4b}.mode{display:flex;flex-direction:column}.mode label{margin:6px 0}.summary{padding:14px;border-radius:12px;background:#f6edf2;font-weight:700}footer{text-align:center;font-size:11px;color:#918694;margin:30px}
+:root{font-family:-apple-system,BlinkMacSystemFont,"Hiragino Kaku Gothic ProN",sans-serif;color:#342b37;background:#f8f4f0;font-synthesis:none}*{box-sizing:border-box}body{margin:0}main{max-width:700px;margin:auto;padding:0 16px 40px}header{text-align:center;background:#261b31;color:#fff;padding:28px 12px;border-radius:0 0 22px 22px;margin:0 -16px 22px}.brand{font-size:25px;font-weight:800;letter-spacing:.04em}.subtitle{font-size:12px;color:#e6d5c4;margin-top:6px}.panel{background:#fff;border-radius:20px;padding:20px;box-shadow:0 5px 25px #30213912;margin-bottom:20px}.hero{text-align:center}.stage{background:linear-gradient(135deg,#452438,#7b3048 50%,#392337);border-radius:16px;padding:35px 10px;color:white}.stage h1{font-size:25px}.stage p{font-size:13px;color:#f5dfe3}button{border:1px solid #dcd5dd;background:#fff;color:#372b3b;padding:11px 14px;border-radius:12px;font-size:14px;cursor:pointer}button:disabled{opacity:.4}button.primary{display:block;width:100%;margin:18px 0 8px;background:#8a3f62;color:#fff;border:0;font-weight:700;padding:16px}button.secondary{margin-top:12px;width:100%}button.small{font-size:12px;padding:7px 10px}.note{color:#8b8290;font-size:12px;line-height:1.6}h2{font-size:19px;margin:4px 0 18px}h3{font-size:15px;margin:20px 0 10px}.themeGrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px}.theme{display:flex;flex-direction:column;gap:6px;align-items:center}.theme span{font-size:32px}.theme small{color:#817885}.theme.active{border:2px solid #9e5277;background:#fff4f8}label{display:block;font-size:14px;margin:16px 0}input:not([type=radio]):not([type=range]),select{display:block;width:100%;border:1px solid #ded8df;border-radius:10px;padding:12px;margin-top:7px;font-size:16px;background:white}input[type=range]{display:block;width:100%;accent-color:#9e5277;margin-top:12px}.sectionHeading{display:flex;align-items:center;justify-content:space-between}.preview{margin:auto;background:#251b2d;border-radius:12px;overflow:hidden;max-width:100%}.preview.wide{aspect-ratio:16/9}.preview.vertical{aspect-ratio:9/16;max-width:230px}.previewFrame{width:100%;height:100%;position:relative;display:flex;align-items:center;justify-content:center;color:#fff}.previewFrame img{width:100%;height:100%;object-fit:contain}.previewTitle{position:absolute;bottom:8px;left:0;right:0;text-align:center;color:#fff;text-shadow:0 1px 5px #000;font-weight:700}.actions{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0}.strip{display:flex;gap:8px;overflow-x:auto;padding:6px 0}.thumb{min-width:74px;width:74px;height:74px;padding:3px;position:relative}.thumb.selected{border:2px solid #9e5277}.thumb img{width:100%;height:100%;object-fit:cover;border-radius:8px}.thumb span{position:absolute;bottom:3px;right:5px;background:#261b31;color:#fff;padding:1px 5px;border-radius:6px;font-size:10px}.editor{background:#faf7fa;padding:12px;border-radius:12px}.danger{color:#b23a4b}.mode{display:flex;flex-direction:column}.mode label{margin:6px 0}.summary{padding:14px;border-radius:12px;background:#f6edf2;font-weight:700}footer{text-align:center;font-size:11px;color:#918694;margin:30px}
 /* Animated slideshow preview */
-.previewFrame{isolation:isolate}
+.previewFrame{isolation:isolate;background:#1c1425}
 .scenePhoto{position:absolute;inset:0;overflow:hidden;display:flex;align-items:center;justify-content:center}
 .scenePhoto img{width:100%;height:100%;object-fit:contain}
 .scenePhoto.animate.zoom img{animation:photoZoom var(--scene-duration) ease-in-out both}
@@ -27,14 +27,7 @@
 .exportBox{margin:22px 0;padding:15px;border-radius:15px;background:#f4f0f7;border:1px solid #dfd5e8}.exportBox h3{margin-top:0}.exportBox .primary:disabled{opacity:.6}.downloadLink{display:inline-flex;align-items:center;padding:11px 14px;border:1px solid #dcd5dd;border-radius:12px;color:#63314f;text-decoration:none;font-size:14px;background:white}
 
 .designBox{margin:20px 0;padding:14px;border-radius:14px;background:#fff8f9;border:1px solid #f1dbe5}.designBox h3{margin-top:0}.designBox textarea{display:block;width:100%;border:1px solid #ded8df;border-radius:10px;padding:12px;margin-top:7px;font-size:16px;font-family:inherit;resize:vertical}
-.photoDecoration{position:absolute;inset:5px;z-index:2;pointer-events:none;border:5px solid #f7cfdf;display:flex;justify-content:space-between;align-items:flex-start;padding:8px;font-size:19px;text-shadow:0 1px 4px #0005}
-.photoDecoration.gold{border-color:#d5aa52;color:#fff2ba}.photoDecoration.soft{border-color:#f4d1e5;color:#fff}.photoDecoration.sakura{border-color:#f7cfdf}
-
-.previewFrame.backdrop-sky{background:linear-gradient(#6ab9f4,#eaf8ff)}.previewFrame.backdrop-sakura{background:linear-gradient(#f5b8d0,#fff2f6)}.previewFrame.backdrop-stars{background:linear-gradient(#0e1238,#50418b)}.previewFrame.backdrop-sunset{background:linear-gradient(#f68e8d,#f9c57a)}.previewFrame.backdrop-sparkle{background:linear-gradient(#b89250,#fff2c4)}.previewFrame.backdrop-rainbow{background:linear-gradient(#94d4f4,#ffdce9)}
 .curtainOverlay.curtain-pink .curtainPanel{background:repeating-linear-gradient(90deg,#a94e77,#f4a2c6 14%,#a94e77 26%)}.curtainOverlay.curtain-navy .curtainPanel{background:repeating-linear-gradient(90deg,#101b4e,#3559a1 14%,#142050 26%)}.curtainOverlay.curtain-gold .curtainPanel{background:repeating-linear-gradient(90deg,#8e5715,#e6b44e 14%,#8e5715 26%)}
-.photoDecoration.green{border-color:#7abf81}.photoDecoration.film{border-color:#302a31;border-width:10px}.photoDecoration.balloon{border-color:#f4a1c8}.photoDecoration.snow{border-color:#c8eafa}.photoDecoration.sunflower{border-color:#f5c844}.photoDecoration.polaroid{border-color:#fff;border-width:12px;border-bottom-width:24px}.photoDecoration.album{border-color:#a67e54;border-width:12px}
-.motionDecor{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:2}.motionDecor span{position:absolute;top:-15%;font-size:19px;opacity:.75;animation:fallingDecor 6s linear infinite}.motionDecor.decor-glitter span,.motionDecor.decor-light span,.motionDecor.decor-fireworks span{animation:twinkleDecor 3s ease-in-out infinite;top:35%}.motionDecor.decor-hearts span{color:#ff8cb2}.motionDecor.decor-snow span{color:#e9f8ff}.motionDecor.decor-bubbles span{color:#d4f6ff}
-@keyframes fallingDecor{0%{transform:translateY(-10%) rotate(0);opacity:0}15%{opacity:.8}100%{transform:translateY(420px) rotate(180deg);opacity:0}}@keyframes twinkleDecor{0%,100%{opacity:0;transform:scale(.5) translateY(40px)}50%{opacity:1;transform:scale(1.5) translateY(-40px)}}
 .previewSticker{position:absolute;z-index:3;right:8%;bottom:12%;font-size:clamp(22px,7vw,50px);pointer-events:none}
 
 .photoToolGrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;margin:16px 0}.photoToolGrid button{border:1px solid #e2dbe4;background:#28242d;color:#fff;border-radius:12px;min-height:70px;padding:8px 2px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px}.photoToolGrid button.chosen{background:#7d416a;border-color:#e4a7c8}.photoToolGrid button span{font-size:25px}.photoToolGrid button small{font-size:11px}.photoToolPanel{background:#f7f2f7;border:1px solid #e5d9e5;border-radius:13px;padding:12px;margin-bottom:12px}.photoToolPanel label{display:block}.photoCaption{position:absolute;z-index:4;bottom:12%;left:5%;right:5%;text-align:center;color:#fff;font-size:clamp(13px,3vw,22px);font-weight:700;text-shadow:none}
@@ -112,7 +105,6 @@ input[type="file"][hidden]{display:none!important}
 /* v4.4: the complete outgoing page (title, image, frame, caption) turns as one sheet. */
 .previewFrame .albumFullPageTurn{position:absolute;inset:0;z-index:30;pointer-events:none;transform-origin:left center;backface-visibility:hidden;transform-style:preserve-3d;animation:albumFullSheetTurn 1.35s cubic-bezier(.4,0,.2,1) both!important;background:#f7e9cf;overflow:hidden;box-shadow:8px 2px 24px rgba(35,22,20,.35)}
 .albumTurnPreviousPage,.albumTurnTitlePage{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:#8d725b}
-.albumTurnPreviousPage>img{width:100%;height:100%;object-fit:contain}
 .albumTurnTitlePage{background:#f7e9cf;border:12px solid #8b5a45;color:#65442e;text-align:center;font-size:clamp(23px,6vw,48px);font-weight:800;padding:5%}
 .albumTurnCaption{position:absolute;transform:translate(-50%,-50%);width:max-content;max-width:88%;padding:4px 10px;text-align:center;text-shadow:0 1px 3px #222}
 .albumTurnVideoPlaceholder{font-size:64px}
@@ -139,80 +131,21 @@ input[type="file"][hidden]{display:none!important}
 @keyframes sakuraPetalDrift{0%{transform:translate3d(-26px,-70px,0) rotate(-35deg) rotateY(0deg);opacity:0}12%{opacity:.8}50%{transform:translate3d(23px,65px,0) rotate(110deg) rotateY(75deg);opacity:.9}88%{opacity:.7}100%{transform:translate3d(-13px,170px,0) rotate(270deg) rotateY(180deg);opacity:0}}
 
 /* v4.7 transparent illustrated frames, preserve existing per-photo/global frame settings */
-.photoDecoration.sakura,.photoDecoration.green,.photoDecoration.gold,.photoDecoration.polaroid,.photoDecoration.film,.photoDecoration.album,.photoDecoration.balloon,.photoDecoration.soft,.photoDecoration.snow,.photoDecoration.sunflower,.photoDecoration.theater,.photoDecoration.rainbow{border:0!important;inset:0!important;padding:0!important;background-position:center;background-size:100% 100%;background-repeat:no-repeat}
-.photoDecoration.sakura{background-image:url('../frames/sakura.svg')}
-.photoDecoration.green{background-image:url('../frames/green.svg')}
-.photoDecoration.gold{background-image:url('../frames/gold.svg')}
-.photoDecoration.polaroid{background-image:url('../frames/polaroid.svg')}
-.photoDecoration.film{background-image:url('../frames/film.svg')}
-.photoDecoration.album{background-image:url('../frames/album.svg')}
-.photoDecoration.balloon{background-image:url('../frames/balloon.svg')}
-.photoDecoration.soft{background-image:url('../frames/soft.svg')}
-.photoDecoration.snow{background-image:url('../frames/snow.svg')}
-.photoDecoration.sunflower{background-image:url('../frames/sunflower.svg')}
-.photoDecoration.theater{background-image:url('../frames/theater.svg')}
-.photoDecoration.rainbow{background-image:url('../frames/rainbow.svg')}
 /* v4.8 minimalist, photo-first transparent frame collection */
-.photoDecoration.simple_white{border:0!important;inset:0!important;padding:0!important;background:url('../frames/simple_white.svg') center/100% 100% no-repeat}
-.photoDecoration.simple_beige{border:0!important;inset:0!important;padding:0!important;background:url('../frames/simple_beige.svg') center/100% 100% no-repeat}
-.photoDecoration.simple_gray{border:0!important;inset:0!important;padding:0!important;background:url('../frames/simple_gray.svg') center/100% 100% no-repeat}
-.photoDecoration.simple_black{border:0!important;inset:0!important;padding:0!important;background:url('../frames/simple_black.svg') center/100% 100% no-repeat}
-.photoDecoration.photo_corner{border:0!important;inset:0!important;padding:0!important;background:url('../frames/photo_corner.svg') center/100% 100% no-repeat}
-.photoDecoration.hand_pink{border:0!important;inset:0!important;padding:0!important;background:url('../frames/hand_pink.svg') center/100% 100% no-repeat}
-.photoDecoration.hand_blue{border:0!important;inset:0!important;padding:0!important;background:url('../frames/hand_blue.svg') center/100% 100% no-repeat}
-.photoDecoration.washi{border:0!important;inset:0!important;padding:0!important;background:url('../frames/washi.svg') center/100% 100% no-repeat}
-.photoDecoration.film_simple{border:0!important;inset:0!important;padding:0!important;background:url('../frames/film_simple.svg') center/100% 100% no-repeat}
-.photoDecoration.fine_gold{border:0!important;inset:0!important;padding:0!important;background:url('../frames/fine_gold.svg') center/100% 100% no-repeat}
-.photoDecoration.fine_silver{border:0!important;inset:0!important;padding:0!important;background:url('../frames/fine_silver.svg') center/100% 100% no-repeat}
-.photoDecoration.watercolor{border:0!important;inset:0!important;padding:0!important;background:url('../frames/watercolor.svg') center/100% 100% no-repeat}
 /* v4.9 original user-supplied frame artwork takes precedence over previous SVG drafts */
-.photoDecoration.sakura{background-image:url('../sakura.png')!important}
-.photoDecoration.green{background-image:url('../green.png')!important}
-.photoDecoration.gold{background-image:url('../gold.png')!important}
-.photoDecoration.polaroid{background-image:url('../polaroid.png')!important}
-.photoDecoration.film{background-image:url('../film.png')!important}
-.photoDecoration.album{background-image:url('../album.png')!important}
-.photoDecoration.balloon{background-image:url('../balloon.png')!important}
-.photoDecoration.soft{background-image:url('../soft.png')!important}
-.photoDecoration.snow{background-image:url('../snow.png')!important}
-.photoDecoration.sunflower{background-image:url('../sunflower.png')!important}
-.photoDecoration.theater{background-image:url('../theater.png')!important}
-.photoDecoration.rainbow{background-image:url('../rainbow.png')!important}
-.photoDecoration.simple_white{background-image:url('../simple_white.png')!important}
-.photoDecoration.simple_beige{background-image:url('../simple_beige.png')!important}
-.photoDecoration.simple_gray{background-image:url('../simple_gray.png')!important}
-.photoDecoration.simple_black{background-image:url('../simple_black.png')!important}
-.photoDecoration.photo_corner{background-image:url('../photo_corner.png')!important}
-.photoDecoration.hand_pink{background-image:url('../hand_pink.png')!important}
-.photoDecoration.hand_blue{background-image:url('../hand_blue.png')!important}
-.photoDecoration.washi{background-image:url('../washi.png')!important}
-.photoDecoration.film_simple{background-image:url('../film_simple.png')!important}
-.photoDecoration.fine_gold{background-image:url('../fine_gold.png')!important}
-.photoDecoration.fine_silver{background-image:url('../fine_silver.png')!important}
-.photoDecoration.watercolor{background-image:url('../watercolor.png')!important}
-/* v5.0 frame scope controls and consistent 16:9 photo frame layout */
-.frameScopePanel{display:grid;gap:12px}.frameScopeButtons{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.frameScopeButtons button{font-size:12px;padding:10px 4px;border-radius:10px}.frameScopeButtons button.chosen{background:#754c79;color:white}.frameTargetGrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;max-height:280px;overflow-y:auto}.frameTarget{display:flex;flex-direction:column;gap:4px;align-items:center;font-size:12px}.frameTarget img,.frameTarget video{width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:6px}.frameTarget input{align-self:flex-start}
-.photoDecoration{background-origin:border-box;background-clip:border-box}
 
-/* v5.1 fit photo behind frame opening without stretching */
-.scenePhoto.framedPhoto img,.scenePhoto.framedPhoto video{width:100%;height:100%;object-fit:cover}
 
 /* v5.2: original composite frames have opaque white centers. Multiply removes the white visually while preserving colored borders. */
-.photoDecoration.sakura,.photoDecoration.green,.photoDecoration.gold,.photoDecoration.polaroid,.photoDecoration.film,.photoDecoration.album,.photoDecoration.balloon,.photoDecoration.soft,.photoDecoration.snow,.photoDecoration.sunflower,.photoDecoration.theater,.photoDecoration.rainbow,.photoDecoration.simple_white,.photoDecoration.simple_beige,.photoDecoration.simple_gray,.photoDecoration.simple_black,.photoDecoration.photo_corner,.photoDecoration.hand_pink,.photoDecoration.hand_blue,.photoDecoration.washi,.photoDecoration.film_simple,.photoDecoration.fine_gold,.photoDecoration.fine_silver,.photoDecoration.watercolor{mix-blend-mode:multiply}
 /* Center photos beneath decorative borders with less face clipping. */
-.scenePhoto.framedPhoto img,.scenePhoto.framedPhoto video{object-position:center center}
 
 /* v5.4: align artwork exactly with the video canvas; remove opaque center matte */
-.photoDecoration.sakura,.photoDecoration.green,.photoDecoration.gold,.photoDecoration.polaroid,.photoDecoration.film,.photoDecoration.album,.photoDecoration.balloon,.photoDecoration.soft,.photoDecoration.snow,.photoDecoration.sunflower,.photoDecoration.theater,.photoDecoration.rainbow,.photoDecoration.simple_white,.photoDecoration.simple_beige,.photoDecoration.simple_gray,.photoDecoration.simple_black,.photoDecoration.photo_corner,.photoDecoration.hand_pink,.photoDecoration.hand_blue,.photoDecoration.washi,.photoDecoration.film_simple,.photoDecoration.fine_gold,.photoDecoration.fine_silver,.photoDecoration.watercolor{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;box-sizing:border-box!important;background-size:100% 100%!important;background-position:center!important;mix-blend-mode:normal!important;-webkit-mask-image:linear-gradient(to right,#000 0%,#000 7%,transparent 13%,transparent 87%,#000 93%,#000 100%),linear-gradient(to bottom,#000 0%,#000 10%,transparent 20%,transparent 80%,#000 90%,#000 100%);mask-image:linear-gradient(to right,#000 0%,#000 7%,transparent 13%,transparent 87%,#000 93%,#000 100%),linear-gradient(to bottom,#000 0%,#000 10%,transparent 20%,transparent 80%,#000 90%,#000 100%);-webkit-mask-composite:source-over;mask-composite:add}
 
 /* v5.5 theater: original composite has an opaque white lower mat. Keep only curtain top and side rails, never paint the bottom over a photo. */
-.photoDecoration.theater{-webkit-mask-image:linear-gradient(to bottom,#000 0%,#000 12%,transparent 18%,transparent 100%),linear-gradient(to right,#000 0%,#000 8%,transparent 15%,transparent 100%),linear-gradient(to left,#000 0%,#000 8%,transparent 15%,transparent 100%)!important;mask-image:linear-gradient(to bottom,#000 0%,#000 12%,transparent 18%,transparent 100%),linear-gradient(to right,#000 0%,#000 8%,transparent 15%,transparent 100%),linear-gradient(to left,#000 0%,#000 8%,transparent 15%,transparent 100%)!important;-webkit-mask-composite:source-over!important;mask-composite:add!important}
 
 /* v5.6: frame is always the frontmost visual layer; photo remains movable beneath it. */
 .previewFrame .scenePhoto{z-index:1;isolation:isolate}
-.previewFrame .motionDecor,.previewFrame .previewSticker{z-index:3}
+.previewFrame .previewSticker{z-index:3}
 .previewFrame .photoCaption,.previewFrame .timedSubtitle{z-index:4}
-.previewFrame .photoDecoration{z-index:10!important;pointer-events:none!important}
 
 /* v5.7 square format preview */
 .preview.square{aspect-ratio:1/1;max-width:min(100%,540px)}
@@ -220,44 +153,27 @@ input[type="file"][hidden]{display:none!important}
 /* v5.9 album-specific assets: these are not the general photo-frame feature. */
 .previewFrame .albumCustomTitle{position:absolute;inset:0;z-index:12;background:url('../AB7615CA-AEB7-4DD6-9C97-061B612CF4ED.png') center/100% 100% no-repeat;display:flex;align-items:center;justify-content:center;pointer-events:none}
 .previewFrame .albumCustomTitle span{position:relative;max-width:65%;margin-left:5%;font-size:clamp(15px,3vw,34px);font-weight:700;color:#865b63;text-align:center;text-shadow:0 1px 2px #fff}
-.previewFrame .albumCustomPage{position:absolute;inset:0;z-index:10;background:url('../album_page.png') center/100% 100% no-repeat;pointer-events:none}
 
 .albumTurnTitlePage{background:url('../AB7615CA-AEB7-4DD6-9C97-061B612CF4ED.png') center/100% 100% no-repeat!important}
-.albumTurnPreviousPage:after{content:'';position:absolute;inset:0;background:url('../album_page.png') center/100% 100% no-repeat;pointer-events:none;z-index:5}
 .previewFrame .albumCustomTitle span{position:absolute;top:30%;left:53%;margin:0;transform:translate(-50%,-50%);width:65%}
-
-.previewFrame .scenePhoto.albumFrameLoading{visibility:hidden}
-
-.previewFrame .scenePhoto.albumPhotoInset{inset:9% 7% 9% 11%;overflow:hidden}
 .albumTurnPreviousPage{background:#fff3e5!important;position:relative;overflow:hidden}
-.albumTurnPreviousPage>img{position:absolute;inset:9% 7% 9% 11%;width:82%!important;height:82%!important;object-fit:contain!important}
-.albumTurnPreviousPage .photoDecoration{display:none!important}
 
 /* v6.4: keep outgoing page full-size and visible while turning */
-.previewFrame .scenePhoto.albumPhotoInset{inset:8% 7% 8% 10%}
-.previewFrame .scenePhoto.albumPhotoInset img,.previewFrame .scenePhoto.albumPhotoInset video{object-fit:cover}
 .previewFrame .albumFullPageTurn{animation:albumVisibleTurn 1.8s ease-in-out both!important;transform-style:flat;background:transparent;box-shadow:none}
 .albumTurnPreviousPage{position:absolute!important;inset:0!important;background:#251b2d!important}
-.albumTurnPreviousPage>img{inset:8% 7% 8% 10%;width:83%!important;height:84%!important;object-fit:cover!important}
 .albumTurnTitlePage{border:0!important;padding:0!important}
 @keyframes albumVisibleTurn{0%{transform:scaleX(1);opacity:1}85%{transform:scaleX(.08);opacity:1}100%{transform:scaleX(0);opacity:0}}
 
 /* v6.5: preserve entire source image during positioning; clip only at page aperture */
-.previewFrame .scenePhoto.albumPhotoInset img,.previewFrame .scenePhoto.albumPhotoInset video,.albumTurnPreviousPage>img{object-fit:contain!important}
 .previewFrame .albumCustomTitle span,.albumTurnTitlePage span{position:absolute!important;top:29%!important;left:50%!important;width:65%;max-width:65%;margin:0!important;transform:translate(-50%,-50%)!important;font-size:clamp(15px,3vw,34px);font-weight:700;color:#865b63;text-align:center;line-height:1.2}
-
-.albumTurnPreviousPage.withoutAlbumFrame:after{display:none!important;content:none!important}
-.albumTurnPreviousPage.withoutAlbumFrame>img{inset:0!important;width:100%!important;height:100%!important}
 
 .scenePhoto.animate.none{animation:none!important}.scenePhoto.animate.wipe{animation:trWipe .85s both!important}.scenePhoto.animate.slideUp{animation:trUp .85s both!important}.scenePhoto.animate.circle{animation:trCircle .85s both!important}.scenePhoto.animate.blinds,.scenePhoto.animate.mosaic{animation:trWipe .85s steps(8) both!important}.scenePhoto.animate.flash{animation:trFlash .85s both!important}.scenePhoto.animate.blur{animation:trBlur .85s both!important}@keyframes trWipe{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0)}}@keyframes trUp{from{transform:translateY(100%)}to{transform:translateY(0)}}@keyframes trCircle{from{clip-path:circle(0%)}to{clip-path:circle(75%)}}@keyframes trFlash{from{filter:brightness(4);opacity:.3}to{filter:brightness(1);opacity:1}}@keyframes trBlur{from{filter:blur(16px)}to{filter:blur(0)}}
 
 .transitionUnderlay{position:absolute;inset:0;z-index:0;overflow:hidden;pointer-events:none;animation:underlayHide .9s step-end both}.transitionUnderlay>img{width:100%;height:100%;object-fit:contain}.scenePhoto.animate.fade{animation:trCross .85s both!important}.scenePhoto.animate.fade img{animation:none!important}@keyframes underlayHide{0%{visibility:visible}100%{visibility:hidden}}@keyframes trCross{from{opacity:0}to{opacity:1}}
 
 /* v6.9: overlap the inner right edge of the album aperture */
-.previewFrame .scenePhoto.albumPhotoInset{inset:7% 5.5% 7% 9%!important}
-.albumTurnPreviousPage.withAlbumFrame>img{inset:7% 5.5% 7% 9%!important;width:85.5%!important;height:86%!important}
 
-.albumTurnPhotoClip{position:absolute;inset:0;overflow:hidden;display:flex;align-items:center;justify-content:center}.albumTurnPreviousPage.withAlbumFrame .albumTurnPhotoClip{inset:7% 5.5% 7% 9%;clip-path:inset(0)}.albumTurnPhotoClip>img{width:100%;height:100%;object-fit:contain;display:block}
+.albumTurnPhotoClip{position:absolute;inset:0;overflow:hidden;display:flex;align-items:center;justify-content:center}.albumTurnPhotoClip>img{width:100%;height:100%;object-fit:contain;display:block}
 
 /* v7.2 center title on album paper */
 .previewFrame .albumCustomTitle span,.albumTurnTitlePage span{top:50%!important;left:53%!important}
@@ -328,9 +244,7 @@ input[type="file"][hidden]{display:none!important}
 
 
 /* Keep the album aperture fixed while its media animates. */
-.albumMediaBoundary { position: absolute; inset: 0; clip-path: inset(7% 5.5% 7% 9%); }
 .transitionUnderlay > .underlayClip { position: absolute; inset: 0; overflow: hidden; }
-.transitionUnderlay > .albumUnderlayClip { position: absolute; inset: 7% 5.5% 7% 9%; overflow: hidden; }
 .transitionUnderlay > div > img { width: 100%; height: 100%; object-fit: contain; }
 
 .previewFrame > .openingTitleArtwork {
@@ -342,5 +256,3 @@ input[type="file"][hidden]{display:none!important}
  object-fit: contain;
  background: #1c1425;
 }
-.previewFrame .albumTurnPreviousPage.withAlbumFrame { background: transparent !important; }
-.albumTurnPreviousPage.withAlbumFrame .albumTurnPhotoClip { background: #251b2d; }
