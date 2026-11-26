@@ -351,3 +351,11 @@ input[type="file"][hidden]{display:none!important}
 .graduationHome .projectDetail small { color: #69515a; }
 .graduationHome .projectButtons button { min-height: 44px; margin-right: 0; }
 .graduationHome button:focus-visible { outline: 3px solid #1374a2; outline-offset: 3px; }
+
+.movieTitleBanner {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin-bottom: 10px;
+  border-radius: clamp(12px, 3vw, 24px);
+}

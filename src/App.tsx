@@ -449,8 +449,10 @@ useEffect(()=>{if(!playing)stopMusic()},[playing]);
 useEffect(()=>{if(!playing)return;const isVideo=phase==='photos'&&photos[playIndex]?.kind==='video';const pause=pauseBgmDuringVideo&&isVideo;if(audioRef.current){if(pause)audioRef.current.pause();else void audioRef.current.play().catch(()=>{})}if(soundCtx.current){if(pause)void soundCtx.current.suspend();else void soundCtx.current.resume()}},[playing,phase,playIndex,pauseBgmDuringVideo,photos]);
 
 
-return <main className={step==='home'?'theaterHome':'theaterEditor'}>{step!=='home'?<header><img className="homeArtwork" src={import.meta.env.BASE_URL+'home_header.jpg'} alt="おもいでシアター" onLoad={e=>e.currentTarget.classList.add('loaded')}/><div className="homeCurtain left"/><div className="homeCurtain right"/><div className="brand"><span className="homeCamera">🎥</span>おもいでシアター</div><div className="subtitle">写真が、一本の映画になる。</div></header>:null}
+const titleBanner = new URL('../omoide-movie-title.webp', import.meta.url).href;
+return <main className={step==='home'?'theaterHome':'theaterEditor'}>{step!=='home'?<header><img className="homeArtwork" src={titleBanner} width={1584} height={672} alt="おもいでムービー。写真が、一本の動画になる。" onLoad={e=>e.currentTarget.classList.add('loaded')}/><div className="homeCurtain left"/><div className="homeCurtain right"/><div className="brand"><span className="homeCamera">🎥</span>おもいでムービー</div><div className="subtitle">写真が、一本の動画になる。</div></header>:null}
 {step==='home'?<section className="graduationHome">
+  <img className="movieTitleBanner" src={titleBanner} width={1584} height={672} alt="おもいでムービー。写真が、一本の動画になる。"/>
   <picture>
     <source media="(min-width: 620px)" srcSet={import.meta.env.BASE_URL+'artwork/graduation-wide.webp'} width={1200} height={677}/>
     <img className="graduationCover" src={import.meta.env.BASE_URL+'artwork/graduation-masthead.webp'} width={865} height={778} alt="桜と虹に囲まれたふじほいくえんの卒園ムービー" fetchPriority="high"/>
