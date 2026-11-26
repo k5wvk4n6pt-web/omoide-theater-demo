@@ -322,12 +322,6 @@ input[type="file"][hidden]{display:none!important}
   padding: 12px 12px 24px;
   background: linear-gradient(175deg, #c8ecff, #f1faff 17rem, #fff5ec 33rem, #fcebf2);
 }
-.graduationBrand {
-  margin: 0 0 8px;
-  color: #5d322e;
-  font: 750 clamp(18px, 4vw, 24px)/1.4 "Hiragino Mincho ProN", "Yu Mincho", serif;
-  text-align: center;
-}
 .graduationCover, .graduationFooter {
   display: block;
   width: 100%;
