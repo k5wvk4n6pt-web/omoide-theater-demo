@@ -322,12 +322,6 @@ input[type="file"][hidden]{display:none!important}
   padding: 12px 12px 24px;
   background: linear-gradient(165deg, #fff0f4, #fffaf4 28rem, #fcebf2);
 }
-.graduationBrand {
-  margin: 0 0 8px;
-  color: #693227;
-  font: 750 clamp(18px, 4vw, 24px)/1.4 "Hiragino Mincho ProN", "Yu Mincho", serif;
-  text-align: center;
-}
 .graduationCover, .graduationFooter {
   display: block;
   width: 100%;
@@ -357,4 +351,3 @@ input[type="file"][hidden]{display:none!important}
 .graduationHome .projectDetail small { color: #69515a; }
 .graduationHome .projectButtons button { min-height: 44px; margin-right: 0; }
 .graduationHome button:focus-visible { outline: 3px solid #1374a2; outline-offset: 3px; }
-.theaterHome footer { margin: 16px 0 0; color: #664b55; }

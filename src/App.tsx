@@ -451,7 +451,6 @@ useEffect(()=>{if(!playing)return;const isVideo=phase==='photos'&&photos[playInd
 
 return <main className={step==='home'?'theaterHome':'theaterEditor'}>{step!=='home'?<header><img className="homeArtwork" src={import.meta.env.BASE_URL+'home_header.jpg'} alt="おもいでシアター" onLoad={e=>e.currentTarget.classList.add('loaded')}/><div className="homeCurtain left"/><div className="homeCurtain right"/><div className="brand"><span className="homeCamera">🎥</span>おもいでシアター</div><div className="subtitle">写真が、一本の映画になる。</div></header>:null}
 {step==='home'?<section className="graduationHome">
-  <h1 className="graduationBrand">おもいでシアター</h1>
   <picture>
     <source media="(min-width: 620px)" srcSet={import.meta.env.BASE_URL+'artwork/graduation-wide.webp'} width={1200} height={677}/>
     <img className="graduationCover" src={import.meta.env.BASE_URL+'artwork/graduation-masthead.webp'} width={865} height={778} alt="桜と虹に囲まれたふじほいくえんの卒園ムービー" fetchPriority="high"/>
@@ -551,5 +550,5 @@ return <main className={step==='home'?'theaterHome':'theaterEditor'}>{step!=='ho
  : '共有メニューに「ビデオを保存」が表示される場合は、写真アプリにも保存できます。'}</p></div>:null}
 </section><div className="editPageActions"><button onClick={()=>setEditPage('ending')}>← エンディング</button></div></>:null}<button className="secondary" disabled={importing||draftBusy} onClick={()=>{leaveSharedProject();setImportNotice('');setStep('home')}}>ホームに戻る</button></section>:null}
 <input ref={switchInput} type="file" accept="audio/*,.mp3,.m4a,.wav,.aac" hidden onChange={e=>{void addMusicSwitch(e.target.files);e.target.value=''}}/><input ref={musicInput} type="file" accept="audio/*,.mp3,.m4a,.wav,.aac" hidden onChange={e=>{importMusic(e.target.files);e.target.value=''}}/>
-<footer>おもいでシアター · 試作版 v8.19</footer></main>
+{step!=='home'?<footer>おもいでシアター · 試作版 v8.19</footer>:null}</main>
 }
