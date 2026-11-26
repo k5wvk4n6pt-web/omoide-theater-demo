@@ -322,25 +322,35 @@ input[type="file"][hidden]{display:none!important}
   padding: 12px 12px 24px;
   background: linear-gradient(165deg, #fff0f4, #fffaf4 28rem, #fcebf2);
 }
-.graduationCover, .graduationFooter {
+.graduationHome {
+  width: min(100%, 540px);
+  margin-inline: auto;
+}
+.graduationPoster {
+  position: relative;
+  overflow: hidden;
+  border-radius: clamp(12px, 3vw, 24px);
+  box-shadow: 0 5px 18px #8b4a4e24;
+}
+.graduationPoster img {
   display: block;
   width: 100%;
   height: auto;
-  border-radius: clamp(12px, 3vw, 24px);
 }
-.graduationCover { box-shadow: 0 5px 18px #8b4a4e24; }
-.graduationHome .graduationCreate {
-  position: relative;
-  min-height: 52px;
-  margin: 18px 0;
-  padding: 12px 34px;
-  background: linear-gradient(#d33270, #a6124c);
-  border: 2px solid #fff6f7;
-  border-radius: 40px;
-  box-shadow: 0 0 0 1px #d14e79, 0 5px 12px #87295325;
-  font-size: clamp(16px, 4vw, 21px);
+.graduationPoster .graduationPosterAction {
+  position: absolute;
+  inset: 69.1% 10% auto;
+  height: 9.6%;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 100px;
+  background: transparent;
+  touch-action: manipulation;
 }
-.graduationCreate span { position: absolute; right: 16px; }
+.graduationPoster .graduationPosterAction:active { background: #50001c24; }
+.graduationPoster .graduationPosterAction:disabled { background: #fff8; }
+.graduationPoster .graduationPosterAction:focus-visible { outline-offset: -4px; }
 .graduationHome .draftBox {
   border: 1px solid #edc9ac;
   background: #fff8ef;
@@ -351,11 +361,3 @@ input[type="file"][hidden]{display:none!important}
 .graduationHome .projectDetail small { color: #69515a; }
 .graduationHome .projectButtons button { min-height: 44px; margin-right: 0; }
 .graduationHome button:focus-visible { outline: 3px solid #1374a2; outline-offset: 3px; }
-
-.movieTitleBanner {
-  display: block;
-  width: 100%;
-  height: auto;
-  margin-bottom: 10px;
-  border-radius: clamp(12px, 3vw, 24px);
-}
