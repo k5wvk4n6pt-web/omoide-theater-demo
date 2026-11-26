@@ -61,7 +61,7 @@ export async function exportMovie(o:ExportOptions):Promise<{blob:Blob;extension:
  if(typeof canvas.captureStream!=='function'||typeof MediaRecorder==='undefined')throw Error('このブラウザは動画の書き出しに対応していません。AndroidではChromeでお試しください。');
  const openingImg=o.opening&&['gold_light','floral_wedding','sakura_tunnel','balloon_party','starry_story','retro_cinema'].includes(o.opening)?await loadImage(import.meta.env.BASE_URL+o.opening+'.png').catch(()=>{throw Error('オープニングの背景画像を読み込めませんでした。通信状態を確認してもう一度お試しください。')}):null;
  const titleArtwork = o.opening === 'fuji_graduation'
-  ? await loadImage(new URL('../fuji-graduation.jpeg', import.meta.url).href)
+  ? await loadImage(new URL('../fuji-graduation-opening.webp', import.meta.url).href)
   : null;
  const endingArtwork = o.endingStyle === 'fuji_graduation'
   ? await loadImage(new URL('../fuji-graduation-ending.jpeg', import.meta.url).href)
