@@ -450,11 +450,14 @@ useEffect(()=>{if(!playing)return;const isVideo=phase==='photos'&&photos[playInd
 
 
 const graduationArtwork = new URL('../fuji-graduation-opening.webp', import.meta.url).href;
-const titleBanner = new URL('../omoide-movie-title.webp', import.meta.url).href;
-return <main className={step==='home'?'theaterHome':'theaterEditor'}>{step!=='home'?<header><img className="homeArtwork" src={titleBanner} width={1584} height={672} alt="おもいでムービー。写真が、一本の動画になる。" onLoad={e=>e.currentTarget.classList.add('loaded')}/><div className="homeCurtain left"/><div className="homeCurtain right"/><div className="brand"><span className="homeCamera">🎥</span>おもいでムービー</div><div className="subtitle">写真が、一本の動画になる。</div></header>:null}
+const graduationPosterCover = import.meta.env.BASE_URL + 'artwork/graduation-home-cover.webp';
+return <main className={step==='home'?'theaterHome':'theaterEditor'}>
+{step!=='home'?<header className="graduationEditorHeader">
+  <img src={graduationPosterCover} width={1086} height={1448} alt="卒園ムービー。みんなの思い出を、ひとつに。"/>
+</header>:null}
 {step==='home'?<section className="graduationHome">
   <div className="graduationPoster">
-    <img className="graduationPosterCover" src={import.meta.env.BASE_URL+'artwork/graduation-home-cover.webp'} width={1086} height={1448} alt="卒園ムービー。みんなの思い出を、ひとつに。" fetchPriority="high"/>
+    <img className="graduationPosterCover" src={graduationPosterCover} width={1086} height={1448} alt="卒園ムービー。みんなの思い出を、ひとつに。" fetchPriority="high"/>
     <img className="graduationPosterArtwork" src={graduationArtwork} width={1376} height={768} alt="令和9年 卒園式 思い出アルバム。桜と虹の下にふじほいくえんの園庭。"/>
     <button type="button" className="graduationPosterAction" aria-label="ムービーを作る" disabled={draftBusy} onClick={newProject}/>
   </div>

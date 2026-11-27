@@ -191,23 +191,19 @@ input[type="file"][hidden]{display:none!important}
   background: linear-gradient(155deg, #fff5e8, #fffdf9 45%, #faedf4);
   color: #5b382d;
 }
-.theaterEditor > header {
-  padding: 12px 0;
-  background: #fff2de;
-  text-align: center;
-}
-.theaterEditor > header:has(.homeArtwork.loaded) {
+.theaterEditor > .graduationEditorHeader {
+  width: min(100%, 540px);
+  aspect-ratio: 1086 / 326;
+  margin-inline: auto;
   padding: 0;
-  background: linear-gradient(90deg, #fff3e4, #fffaf2, #fff3e4);
+  overflow: hidden;
+  border-radius: clamp(12px, 3vw, 24px);
+  background: #fff2de;
 }
-.theaterEditor > header .homeArtwork {
-  display: none;
+.graduationEditorHeader img {
+  display: block;
   width: 100%;
   height: auto;
-}
-.theaterEditor > header .homeArtwork.loaded { display: block; }
-.theaterEditor > header:has(.homeArtwork.loaded) > :not(.homeArtwork) {
-  display: none;
 }
 .theaterEditor > .panel {
   padding: clamp(12px, 3vw, 20px);
