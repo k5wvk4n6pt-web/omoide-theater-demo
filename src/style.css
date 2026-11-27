@@ -332,24 +332,41 @@ input[type="file"][hidden]{display:none!important}
   border-radius: clamp(12px, 3vw, 24px);
   box-shadow: 0 5px 18px #8b4a4e24;
 }
-.graduationPoster img {
+.graduationPosterCover {
   display: block;
   width: 100%;
   height: auto;
 }
-.graduationHome .graduationPosterAction {
-  display: block;
-  width: 100%;
-  min-height: 48px;
-  margin: 16px 0 0;
-  border: 2px solid #f6bdc6;
+.graduationPosterArtwork {
+  position: absolute;
+  inset: 23.3% 4.35% 40.25%;
+  width: 91.3%;
+  height: 36.45%;
+  /* Follow the inside of the film strip and leave the foreground blossoms visible. */
+  clip-path: polygon(
+    0% 18%, 2% 14%, 6% 10%, 12% 8%, 21% 7%, 30% 4%, 40% 1%, 50% 0%,
+    60% 1%, 70% 3%, 80% 7%, 89% 8%, 94% 10%, 98% 14%, 100% 18%,
+    99.6% 25%, 98.3% 36%, 96.4% 50%, 94.1% 66%, 93% 77%,
+    91.6% 81%, 89.4% 82%, 87.7% 84%, 86.7% 88%, 87.4% 96%,
+    83% 100%, 74% 99%, 65% 97%, 55% 97%, 48% 98%, 40% 97%, 31% 96%,
+    23% 97%, 16% 99%, 12.1% 97%, 12% 93%, 11% 89%, 9.5% 88%,
+    8.5% 85%, 7.1% 85%, 4.7% 62%, 2.7% 48%, 1.2% 34%, 0% 25%
+  );
+}
+.graduationPoster .graduationPosterAction {
+  position: absolute;
+  inset: 69.1% 10% auto;
+  height: 9.6%;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
   border-radius: 100px;
-  background: linear-gradient(#c23662, #a91449);
-  color: #fff;
-  font-weight: 800;
+  background: transparent;
   touch-action: manipulation;
 }
-.graduationHome .graduationPosterAction:disabled { opacity: .6; }
+.graduationPoster .graduationPosterAction:active { background: #50001c24; }
+.graduationPoster .graduationPosterAction:disabled { background: #fff8; }
+.graduationPoster .graduationPosterAction:focus-visible { outline-offset: -4px; }
 .graduationHome .draftBox {
   border: 1px solid #edc9ac;
   background: #fff8ef;
