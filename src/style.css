@@ -219,7 +219,7 @@ input[type="file"][hidden]{display:none!important}
 .graduationEditorFooter img {bottom:0}
 .theaterEditor > .panel {
   position:relative;
-  margin: clamp(-22px,-4vw,-12px) clamp(8px,3.3vw,18px) clamp(12px,4vw,24px);
+  margin: clamp(10px,2.5vw,18px) clamp(8px,3.3vw,18px) clamp(12px,4vw,24px);
   box-shadow: 0 6px 24px #9b58751a;
   padding: clamp(12px,3.3vw,20px);
   border: 1px solid #f0dfe3;
