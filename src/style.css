@@ -370,6 +370,23 @@ input[type="file"][hidden]{display:none!important}
 .graduationPoster .graduationPosterAction:active { background: #50001c24; }
 .graduationPoster .graduationPosterAction:disabled { background: #fff8; }
 .graduationPoster .graduationPosterAction:focus-visible { outline-offset: -4px; }
+.graduationSubmitLink {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 48px;
+  margin: .9rem 0;
+  padding: .55rem 2.5rem;
+  border: 1px solid #d48ca5;
+  border-radius: 999px;
+  background: #fff0f5;
+  color: #882747;
+  font-weight: 750;
+  text-align: center;
+  text-decoration: none;
+}
+.graduationSubmitLink span {position:absolute;right:1rem;font-size:1.5rem}
+.graduationSubmitLink:focus-visible {outline:3px solid #1374a2;outline-offset:3px}
 .graduationHome .draftBox {
   border: 1px solid #edc9ac;
   background: #fff8ef;

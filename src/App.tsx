@@ -665,6 +665,7 @@ useEffect(()=>{
 },[playing,phase,playIndex,pauseBgmDuringVideo,photos]);
 
 
+const submissionSite='https://kiku-sotsuen-movie.th-1043.chatgpt.site/';
 const graduationArtwork = new URL('../fuji-graduation-opening.webp', import.meta.url).href;
 const graduationPosterCover = import.meta.env.BASE_URL + 'artwork/graduation-home-cover.webp';
 return <main className={step==='home'?'theaterHome':'theaterEditor'}>
@@ -677,6 +678,7 @@ return <main className={step==='home'?'theaterHome':'theaterEditor'}>
     <img className="graduationPosterArtwork" src={graduationArtwork} width={1376} height={768} alt="令和9年 卒園式 思い出アルバム。桜と虹の下にふじほいくえんの園庭。"/>
     <button type="button" className="graduationPosterAction" aria-label="ムービーを作る" disabled={draftBusy} onClick={newProject}/>
   </div>
+  <a className="graduationSubmitLink" href={submissionSite}>写真・動画の提出ページへ <span aria-hidden="true">›</span></a>
   {projects.length>0?<div className="draftBox"><h3>📁 保存した作品（{projects.length}件）</h3><div className="projectList">{projects.map(p=><div className="projectCard" key={p.id}>{thumbUrls[p.id]?<img src={thumbUrls[p.id]} alt="作品の表紙"/>:<div className="projectFallback">🎬</div>}<div className="projectDetail"><strong>{p.title}</strong><small>{p.photoCount}枚 · {new Date(p.savedAt).toLocaleString('ja-JP')}</small><div className="projectButtons"><button onClick={()=>restoreProject(p.id)} disabled={draftBusy}>編集する</button><button onClick={()=>copyProject(p.id)} disabled={draftBusy}>複製</button><button onClick={()=>eraseProject(p.id)} disabled={draftBusy}>削除</button></div></div></div>)}</div></div>:null}{draftInfo?<p className="note" role="status">{draftInfo}</p>:null}</section>:null}
 {step==='edit'?<section className="panel"><div className="sectionHeading"><h2>ムービーを作成</h2></div><nav className="editSteps" aria-label="編集の手順">{([['opening','① オープニング'],['main','② 本編'],['ending','③ エンディング'],['finish','④ 完成・保存']] as const).map(([key,label])=><button key={key} className={editPage===key?'active':''} aria-current={editPage===key?'step':undefined} onClick={()=>{setPlaying(false);setScrubbing(false);setEditPage(key)}}>{label}</button>)}</nav>{editPage!=='opening'?<div className="actions" role="group" aria-label="写真・動画の追加">
 <label className={'mediaPicker'+(photos.length===0?' primary':'')}>
@@ -760,7 +762,7 @@ return <main className={step==='home'?'theaterHome':'theaterEditor'}>
  <div className="actions"><button onClick={copyShareLink}>共有リンクをコピー</button><button disabled={draftBusy||importing} onClick={reloadShared}>共有先の最新版を開く</button></div>
  <p className="note">リンクを知っている人は、写真や動画を見て作品を編集できます。</p>
  <div className="actions">
-  <a className="downloadLink" target="_blank" rel="noreferrer" href={'https://kiku-sotsuen-movie.th-1043.chatgpt.site/manage#project='+shared.token}>きく組の提出データを追加</a>
+  <a className="downloadLink" target="_blank" rel="noreferrer" href={submissionSite+'manage#project='+shared.token}>きく組の提出データを追加</a>
  </div>
 </div>:null}
 {shareNotice?<p className="note" role="status">{shareNotice}</p>:null}
