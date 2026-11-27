@@ -386,3 +386,7 @@ input[type="file"][hidden]{display:none!important}
 .previewHeading button{margin:0 0 0 auto;min-height:44px}
 
 .scenePhoto[data-video-hidden="true"]{opacity:0!important;pointer-events:none;animation:none!important}
+
+.previewTimeline label{display:block;margin:.5rem 0 0}
+.previewTimeline span{float:right;font-variant-numeric:tabular-nums}
+.previewTimeline input[type="range"]{display:block;width:100%;margin:.25rem 0 0;min-height:32px}

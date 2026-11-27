@@ -72,6 +72,8 @@ const [musicSeconds,setMusicSeconds]=useState(180);
 const [duration,setDuration]=useState(5);
 const [aspect,setAspect]=useState<'wide'|'vertical'|'square'>('wide');
 const [playing,setPlaying]=useState(false);
+const [previewPosition,setPreviewPosition]=useState(0);
+const [sceneOffset,setSceneOffset]=useState(0);
 const [playIndex,setPlayIndex]=useState(0);
 const [phase,setPhase]=useState<'intro'|'photos'|'outro'>('intro');
 const [sceneKey,setSceneKey]=useState(0);
@@ -162,22 +164,37 @@ useEffect(()=>()=>{if(audioFile)URL.revokeObjectURL(audioFile.url)},[audioFile])
 useEffect(()=>{if(audioRef.current)audioRef.current.volume=volume/100},[volume]);
 const intro=6,outro=6;
 const computed=useMemo(()=>mode==='photo'?photos.map(p=>p.duration):photos.map(p=>p.kind==='video'?p.duration:Math.max(1,(musicSeconds-intro-outro-photos.filter(x=>x.kind==='video').reduce((a,b)=>a+b.duration,0))/Math.max(1,photos.filter(x=>x.kind!=='video').length))),[photos,mode,musicSeconds]);
-const total=intro+outro+computed.reduce((a,b)=>a+b,0);
+const sceneStarts=useMemo(()=>{
+ const starts=[intro];
+ for(const seconds of computed)starts.push(starts[starts.length-1]+seconds);
+ return starts;
+},[computed]);
+const outroStart=sceneStarts[sceneStarts.length-1];
+const total=outroStart+outro;
+const positionLabel=(seconds:number)=>{
+ const whole=Math.floor(seconds);
+ return Math.floor(whole/60)+':'+String(whole%60).padStart(2,'0');
+};
 const switchAt=(m:MusicSwitch)=>m.anchor==='photo'&&m.photoId?intro+computed.slice(0,Math.max(0,photos.findIndex(p=>p.id===m.photoId))).reduce((a,b)=>a+b,0):m.start;
 const orderedSwitches=[...musicSwitches].sort((a,b)=>switchAt(a)-switchAt(b));
 useEffect(()=>{
 if(!playing||photos.length===0)return;
 if(phase==='photos'&&photos[playIndex]?.kind==='video'&&previewVideoScene!==sceneKey)return;
 const seconds=phase==='intro'?intro:phase==='outro'?outro:computed[playIndex];
+const sceneStart=phase==='intro'?0:phase==='outro'?outroStart:sceneStarts[playIndex];
+const startedAt=performance.now();
+setPreviewPosition(sceneStart+sceneOffset);
+const progress=window.setInterval(()=>setPreviewPosition(Math.min(sceneStart+seconds,sceneStart+sceneOffset+(performance.now()-startedAt)/1000)),100);
 const timer=window.setTimeout(()=>{
+ setSceneOffset(0);
  if(phase==='intro'){setPhase('photos');setPlayIndex(0)}
  else if(phase==='photos'&&playIndex<photos.length-1){setPlayIndex(i=>i+1)}
  else if(phase==='photos'){setPhase('outro')}
- else{setPlaying(false);setPhase('intro');setPlayIndex(0)}
+ else{setPlaying(false);setPhase('intro');setPlayIndex(0);setPreviewPosition(0)}
  setSceneKey(k=>k+1);
-},seconds*1000);
-return()=>window.clearTimeout(timer);
-},[playing,phase,playIndex,photos,computed,previewVideoScene,sceneKey]);
+},Math.max(0,seconds-sceneOffset)*1000);
+return()=>{window.clearTimeout(timer);window.clearInterval(progress)};
+},[playing,phase,playIndex,photos,computed,previewVideoScene,sceneKey,sceneOffset,sceneStarts,outroStart]);
 function readVideoDuration(url:string){
  return new Promise<number>(resolve=>{
   const video=document.createElement('video');
@@ -290,12 +307,12 @@ function stopMusic(clearSwitches=true){
  if(soundCtx.current){void soundCtx.current.close();soundCtx.current=null}
  setMusicPlaying(false);
 }
-function playMusic(){
+function playMusic(elapsed=0){
  stopMusic(false);setMusicError('');
  if(bgm==='none')return;
  if(bgm==='file'){
   if(!audioFile){setMusicError('先に音楽ファイルを選んでください');return}
-  const audio=new Audio(audioFile.url);audio.loop=true;audio.volume=volume/100;audioRef.current=audio;const seek=()=>{try{audio.currentTime=Math.min(bgmOffset,Math.max(0,(audio.duration||audioFile.seconds)-.1))}catch{}};audio.addEventListener('loadedmetadata',seek,{once:true});seek();
+  const audio=new Audio(audioFile.url);audio.loop=true;audio.volume=volume/100;audioRef.current=audio;const seek=()=>{try{audio.currentTime=(bgmOffset+elapsed)%(audio.duration||audioFile.seconds||1)}catch{}};audio.addEventListener('loadedmetadata',seek,{once:true});seek();
   void audio.play().then(()=>setMusicPlaying(true)).catch(()=>{setMusicError('この音声は再生できません。別のファイルをお試しください');setMusicPlaying(false)});
   return;
  }
@@ -304,7 +321,7 @@ function playMusic(){
   const gentle=[261.63,329.63,392,523.25,392,329.63,293.66,349.23];
   const bright=[392,493.88,587.33,783.99,659.25,587.33,493.88,523.25];
   const notes=bgm==='gentle'?gentle:bright;
-  let index=0;
+  let index=Math.floor(elapsed/(bgm==='gentle'?1.3:.85));
   const note=()=>{if(ctx.state==='closed')return;const osc=ctx.createOscillator(),gain=ctx.createGain();
    osc.type=bgm==='gentle'?'sine':'triangle';osc.frequency.value=notes[index++%notes.length];
    const t=ctx.currentTime;gain.gain.setValueAtTime(0.0001,t);gain.gain.exponentialRampToValueAtTime(Math.max(.0001,volume/100*.09),t+.12);gain.gain.exponentialRampToValueAtTime(.0001,t+1.1);
@@ -343,31 +360,62 @@ useEffect(()=>{
  const begin=()=>{
   video.defaultMuted=false;
   video.muted=false;
-  const start=clip.trimStart??0;
+  const start=(clip.trimStart??0)+sceneOffset;
   try{if(Math.abs(video.currentTime-start)>.15)video.currentTime=start}catch{}
   void video.play().catch(()=>{if(active)setPreviewVideoBlocked(true)});
  };
  if(video.readyState>=1)begin();
  else video.addEventListener('loadedmetadata',begin,{once:true});
  return()=>{active=false;video.removeEventListener('loadedmetadata',begin);video.pause()};
-},[playing,phase,playIndex,sceneKey,titleCardStill,activePhoto?.url]);
-useEffect(()=>{setSubtitleTime(0)},[playIndex,selected,sceneKey]);
-useEffect(()=>{if(!playing||phase!=='photos'||(photos[playIndex]?.kind==='video'&&previewVideoScene!==sceneKey))return;const start=performance.now();const timer=window.setInterval(()=>setSubtitleTime(Math.min(computed[playIndex]??5,(performance.now()-start)/1000)),100);return()=>clearInterval(timer)},[playing,phase,playIndex,sceneKey,previewVideoScene]);
+},[playing,phase,playIndex,sceneKey,titleCardStill,activePhoto?.url,sceneOffset]);
+useEffect(()=>{setSubtitleTime(playing?sceneOffset:0)},[playIndex,selected,sceneKey]);
+useEffect(()=>{if(!playing||phase!=='photos'||(photos[playIndex]?.kind==='video'&&previewVideoScene!==sceneKey))return;const start=performance.now();const timer=window.setInterval(()=>setSubtitleTime(Math.min(computed[playIndex]??5,sceneOffset+(performance.now()-start)/1000)),100);return()=>clearInterval(timer)},[playing,phase,playIndex,sceneKey,previewVideoScene,sceneOffset]);
 async function addMusicSwitch(files:FileList|null){const file=files?.[0];if(!file)return;const url=URL.createObjectURL(file);const seconds=await new Promise<number>(resolve=>{const a=new Audio();a.preload='metadata';a.onloadedmetadata=()=>resolve(Number.isFinite(a.duration)?Math.round(a.duration):0);a.onerror=()=>resolve(0);a.src=url});setMusicSwitches(v=>[...v,{id:id(),name:file.name,url,seconds,start:Math.min(total,6),anchor:'time',offset:0,volume:volume,fade:1}])}
+function seekPreview(position:number){
+ setPlaying(false);
+ stopMusic();
+ setPreviewPosition(position);
+}
 function startPreview(){
  if(!photos.length)return;
- if(playing){setPlaying(false);setPhase('intro');stopMusic()}
- else{
-  const video=previewVideo.current;
-  if(video&&photos.some(photo=>photo.kind==='video')){
-   const silence=new URL('../preview-silence.mp4',import.meta.url).href;
-   video.src=silence;
-   // Start the same player from the tap before switching it to the user's clips.
-   void video.play().catch(()=>{});
-  }
-  setPlayIndex(0);setPhase('intro');setPlaying(true);stopMusic();if(bgmStart<=0)playMusic();else{bgmDelay.current=window.setTimeout(()=>{bgmDelay.current=null;playMusic();syncPreviewBgm(previewBgmPaused.current)},bgmStart*1000)}
- for(const m of orderedSwitches){const at=Math.max(0,switchAt(m));const timer=window.setTimeout(()=>{if(switchAudio.current)switchAudio.current.pause();if(audioRef.current)audioRef.current.pause();if(soundCtx.current)void soundCtx.current.suspend();const a=new Audio(m.url);switchAudio.current=a;a.volume=Math.min(1,m.volume/100);a.loop=true;const seek=()=>{try{a.currentTime=Math.min(m.offset,Math.max(0,(a.duration||m.seconds)-.1))}catch{}};a.addEventListener('loadedmetadata',seek,{once:true});seek();if(!previewBgmPaused.current)void a.play().catch(()=>setMusicError('切り替えBGMを再生できませんでした'))},at*1000);switchTimers.current.push(timer)} }
- setSceneKey(k=>k+1)
+ if(playing){seekPreview(previewPosition);return;}
+ const position=previewPosition>=total?0:previewPosition;
+ const nextIndex=Math.max(0,sceneStarts.findIndex((start,index)=>index>0&&position<start)-1);
+ const nextPhase=position<intro?'intro':position>=outroStart?'outro':'photos';
+ const offset=position-(nextPhase==='intro'?0:nextPhase==='outro'?outroStart:sceneStarts[nextIndex]);
+ const video=previewVideo.current;
+ if(video&&photos.some(photo=>photo.kind==='video')){
+  const clip=nextPhase==='photos'?photos[nextIndex]:undefined;
+  video.src=clip?.kind==='video'?clip.url:new URL('../preview-silence.mp4',import.meta.url).href;
+  if(clip?.kind==='video'){try{video.currentTime=(clip.trimStart??0)+offset}catch{}}
+  void video.play().catch(()=>{});
+ }
+ setPreviewPosition(position);
+ setPlayIndex(nextIndex);setPhase(nextPhase);setSceneOffset(offset);setPlaying(true);
+ setSceneKey(key=>key+1);
+ stopMusic();
+ const pause=pauseBgmDuringVideo&&nextPhase==='photos'&&photos[nextIndex]?.kind==='video';
+ previewBgmPaused.current=pause;
+ const activeSwitch=[...orderedSwitches].reverse().find(m=>switchAt(m)<=position);
+ function startSwitch(m:MusicSwitch,elapsed:number){
+  switchAudio.current?.pause();
+  audioRef.current?.pause();
+  if(soundCtx.current)void soundCtx.current.suspend();
+  const audio=new Audio(m.url);
+  switchAudio.current=audio;
+  audio.volume=Math.min(1,m.volume/100);
+  audio.loop=true;
+  const seek=()=>{if(Number.isFinite(audio.duration)&&audio.duration>0)audio.currentTime=(m.offset+elapsed)%audio.duration};
+  audio.addEventListener('loadedmetadata',seek,{once:true});seek();
+  if(!previewBgmPaused.current)void audio.play().catch(()=>setMusicError('切り替えBGMを再生できませんでした'));
+ }
+ if(activeSwitch)startSwitch(activeSwitch,position-switchAt(activeSwitch));
+ else if(position>=bgmStart){playMusic(position-bgmStart);syncPreviewBgm(pause)}
+ else bgmDelay.current=window.setTimeout(()=>{bgmDelay.current=null;if(!switchAudio.current){playMusic();syncPreviewBgm(previewBgmPaused.current)}},(bgmStart-position)*1000);
+ for(const m of orderedSwitches){
+  const at=switchAt(m);
+  if(at>position)switchTimers.current.push(window.setTimeout(()=>startSwitch(m,0),(at-position)*1000));
+ }
 }
 async function snapshotProject():Promise<StoredProject>{
  const getBlob=async (url:string)=>{
@@ -399,7 +447,7 @@ function applyStoredProject(draft:StoredProject,targetId:string|null){
    const isVideo=p.blob.type.startsWith('video/') || /\.(mov|mp4|m4v|webm)$/i.test(meta.name ?? '');
    return {...meta, kind:isVideo?'video':(meta.kind ?? 'image'), url:URL.createObjectURL(p.blob)} as Photo;
   });
-  photosRef.current.forEach(p=>URL.revokeObjectURL(p.url));setPhotos(next);setSelected(0);setUndoStack([]);setRedoStack([]);setPlaying(false);
+  photosRef.current.forEach(p=>URL.revokeObjectURL(p.url));setPhotos(next);setSelected(0);setUndoStack([]);setRedoStack([]);setPlaying(false);setPreviewPosition(0);
   const v=draft.settings;
   setTitle(v.title as string);setEnding(v.ending as string);setEndingStyle(v.endingStyle==='fuji_graduation'?'fuji_graduation':'message');setSticker(v.sticker as string);setCurtainColor((v.curtainColor as typeof curtainColor)||'red');setOpening((v.opening as typeof opening)||(v.theme==='theater'?'curtain':'fade'));setMode(v.mode as typeof mode);setMusicSeconds(v.musicSeconds as number);setDuration(v.duration as number);setAspect(v.aspect as typeof aspect);setBgm(v.bgm as typeof bgm);setVolume(v.volume as number);setBgmStart(Math.max(0,Number(v.bgmStart)||0));setBgmOffset(Math.max(0,Number(v.bgmOffset)||0));setPauseBgmDuringVideo(v.pauseBgmDuringVideo!==false);
   setMusicSwitches((Array.isArray(v.musicSwitches)?v.musicSwitches:[]).map((m:MusicSwitch)=>{const item=draft.switchFiles?.find(x=>x.id===m.id);return {...m,url:item?URL.createObjectURL(item.blob):''}}).filter((m:MusicSwitch)=>m.url));
@@ -489,7 +537,7 @@ async function eraseProject(targetId:string){
 async function copyProject(targetId:string){
  try{await duplicateProject(targetId,id());await refreshProjects();setDraftInfo('作品を複製しました')}catch{setDraftInfo('複製できませんでした')}
 }
-function newProject(){leaveSharedProject();setPlaying(false);stopMusic();setPhotos([]);setProjectId(null);setSelected(0);setUndoStack([]);setRedoStack([]);setAudioFile(null);setMusicSwitches([]);setTitle('');setOpening('fuji_graduation');setEndingStyle('message');setEnding('ありがとう、たくさんの思い出');setEditPage('opening');setStep('edit');setDraftInfo('')}
+function newProject(){leaveSharedProject();setPlaying(false);setPreviewPosition(0);stopMusic();setPhotos([]);setProjectId(null);setSelected(0);setUndoStack([]);setRedoStack([]);setAudioFile(null);setMusicSwitches([]);setTitle('');setOpening('fuji_graduation');setEndingStyle('message');setEnding('ありがとう、たくさんの思い出');setEditPage('opening');setStep('edit');setDraftInfo('')}
 
 async function makeMovie(){
  if(!photos.length||exporting)return;
@@ -547,7 +595,7 @@ return <main className={step==='home'?'theaterHome':'theaterEditor'}>
  <input type="file" accept="video/*,.mov,.mp4,.m4v,.webm" multiple disabled={importing||draftBusy} onChange={importSelectedMedia}/>
 </label>
 </div>:null}<p className="note" role="status" hidden={!importNotice}>{importNotice}</p>
-<section className="sharedPreview"><div className="previewHeading"><h3>{openingStill?'🎬 オープニングプレビュー':endingStill?'🌷 エンディングプレビュー':'🎥 全体プレビュー'}</h3>{photos.length>0?<button type="button" onClick={startPreview}>{playing?'■ 停止':'▶ 最初から再生'}</button>:null}</div><div className={'preview '+aspect}><div className={'previewFrame'+(openingStill?' openingStill':'')}>
+<section className="sharedPreview"><div className="previewHeading"><h3>{openingStill?'🎬 オープニングプレビュー':endingStill?'🌷 エンディングプレビュー':'🎥 全体プレビュー'}</h3>{photos.length>0?<button type="button" onClick={startPreview}>{playing?'■ 停止':previewPosition>0&&previewPosition<total?'▶ ここから再生':'▶ 最初から再生'}</button>:null}</div><div className={'preview '+aspect}><div className={'previewFrame'+(openingStill?' openingStill':'')}>
 {playing&&phase==='photos'&&transitionEffect==='page'&&photos.length>0&&((playIndex===0&&opening==='album')||photos[playIndex-1])?<div key={'turn-'+sceneKey} className="albumFullPageTurn" aria-hidden="true">{playIndex===0?<div className="albumTurnTitlePage"><span>{title}</span></div>:<div className="albumTurnPreviousPage"><div className="albumTurnPhotoClip">{photos[playIndex-1].kind==='video'?<div className="albumTurnVideoPlaceholder">🎞️</div>:<img src={photos[playIndex-1].url} alt="" style={{transform:'scale('+(photos[playIndex-1].zoom??1)+') translate('+(photos[playIndex-1].offsetX??0)+'%,'+(photos[playIndex-1].offsetY??0)+'%)'}}/>}</div>{photos[playIndex-1].caption?<div className="albumTurnCaption" style={{left:(photos[playIndex-1].captionX??50)+'%',top:(photos[playIndex-1].captionY??83)+'%',fontFamily:photos[playIndex-1].captionFont==='cursive'?'Yomogi, cursive':photos[playIndex-1].captionFont??'sans-serif',fontSize:(photos[playIndex-1].captionSize??22)+'px',fontWeight:photos[playIndex-1].captionWeight??700,color:photos[playIndex-1].captionColor??'#fff',background:photos[playIndex-1].captionBackground?'rgba(0,0,0,.58)':'transparent'}}>{photos[playIndex-1].caption}</div>:null}</div>}</div>:null}
 {showOpening&&opening==='album'?<div className="albumCustomTitle"><span>{title}</span></div>:null}
 {playing&&phase==='photos'&&playIndex>0&&transitionEffect!=='none'&&transitionEffect!=='page'&&photos[playIndex-1].kind!=='video'?<div key={'under-'+sceneKey} className="transitionUnderlay"><div className="underlayClip"><img src={photos[playIndex-1].url} alt="" style={{transform:'scale('+(photos[playIndex-1].zoom??1)+') translate('+(photos[playIndex-1].offsetX??0)+'%,'+(photos[playIndex-1].offsetY??0)+'%)'}}/></div></div>:null}
@@ -569,6 +617,11 @@ return <main className={step==='home'?'theaterHome':'theaterEditor'}>
 {showOpening && opening==='fuji_graduation' ? <img className="openingTitleArtwork" src={graduationArtwork} alt="令和9年 卒園式 思い出アルバム"/> : null}
 {showOpening&&opening!=='curtain'&&opening!=='album'&&opening!=='fuji_graduation'?<div key={'opening-'+sceneKey} className={'openingOverlay opening-'+opening}>{(['gold_light','floral_wedding','sakura_tunnel','balloon_party','starry_story','retro_cinema'].includes(opening))?<><div className="openingPhotoBackground" style={{backgroundImage:`url(${import.meta.env.BASE_URL}${opening}.png)`}}/><div className={"openingPhotoParticles"+(opening==='sakura_tunnel'?" sakuraPetalParticles":"")} aria-hidden="true">{Array.from({length:14},(_,i)=><span key={i} style={{left:(i*37%97)+'%',top:(i*23%91)+'%',animationDelay:-(i*.43)+'s'}}>{opening==='sakura_tunnel'?' ':opening==='balloon_party'?'🎈':opening==='floral_wedding'?'✿':opening==='retro_cinema'?'✦':opening==='starry_story'?'✧':'✦'}</span>)}</div></>:null}{opening==='countdown'?(!openingStill||!title.trim())&&<div className="countdownDial" aria-label="3、2、1とカウントダウン"><span className="countdownNumber countdownThree">3</span><span className="countdownNumber countdownTwo">2</span><span className="countdownNumber countdownOne">1</span><span className="countdownSweep"/></div>:<div className="openingOrnaments" aria-hidden="true">{opening==='sparkle'?'✦ ✧ ✨ ✦ ✧':opening==='sakura'?'🌸 🌸 🌸 🌸':opening==='rainbow'?'🌈 ☁️ ☁️':'✧'}</div>}<div className="openingHeading">{title}</div></div>:null}
 </div></div>
+{photos.length>0?<div className="previewTimeline">
+ <label>再生位置 <span>{positionLabel(Math.min(previewPosition,total))} / {positionLabel(total)}</span>
+  <input type="range" min={0} max={total} step="any" value={Math.min(previewPosition,total)} onChange={e=>seekPreview(Number(e.target.value))}/>
+ </label>
+</div>:null}
 {playing&&previewVideoBlocked?<p className="note" role="status">動画の再生ボタンを押すと、音声付きでプレビューを続けられます。</p>:null}
 {editPage==='main'?<><h3>写真の並び順</h3><div className="strip">{photos.map((p,i)=><button key={p.id} className={'thumb '+(selected===i?'selected':'')} onClick={()=>{setSelected(i);setPlaying(false);setPhase('intro');setSceneKey(k=>k+1)}}>{p.kind==='video'?<VideoThumbnail url={p.url} name={p.name}/>:<img src={p.url} alt={p.name}/>}<span>{i+1}</span></button>)}</div>{current&&<div className="editor"><h3>選択中の{current.kind==='video'?'動画':'写真'}：{selected+1}番目</h3><div className="photoToolGrid">{([['text','T','文字'],['subtitles','▤','字幕'],['sticker','☺','スタンプ'],['transition','⇄','切り替え'],['duration','◷','表示時間'],['position','⛶','拡大・移動'],['apply','▢','一括適用']] as const).map(([key,icon,label])=><button key={key} className={editTool===key?'chosen':''} onClick={()=>{if(key==='transition')setTransitionChoice(current.effect);setEditTool(editTool===key?null:key)}}><span>{icon}</span><small>{key==='duration'&&current.kind==='video'?'トリミング':label}</small></button>)}</div>
 {editTool?<div className="photoToolPanel">
