@@ -419,3 +419,8 @@ input[type="file"][hidden]{display:none!important}
   transform: translateY(-35.9375%);
   clip-path: inset(28.90625% 0 57.03125%);
 }
+
+.theaterEditor > .graduationEditorHeader {
+  -webkit-mask-image: linear-gradient(to bottom, #000 80%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 80%, transparent 100%);
+}
