@@ -192,26 +192,24 @@ input[type="file"][hidden]{display:none!important}
   color: #5b382d;
 }
 .theaterEditor > .graduationEditorHeader {
-  width: min(100%, 540px);
-  aspect-ratio: 1086 / 326;
-  margin-inline: auto;
-  padding: 0;
-  overflow: hidden;
-  border-radius: clamp(12px, 3vw, 24px);
-  background: #fff2de;
+  position:relative;
+  width:min(100%,540px);
+  aspect-ratio:907/255;
+  margin-inline:auto;
+  padding:0;
+  overflow:hidden;
+  border-radius:clamp(12px,3vw,24px);
+  background:#fff2de;
 }
-.graduationEditorHeader img {
-  display: block;
-  width: 100%;
-  height: auto;
+.graduationEditorHeader img,
+.illustratedEditSteps button img {
+  position:absolute;
+  display:block;
+  max-width:none;
+  height:auto;
+  pointer-events:none;
 }
-.graduationEditorHeader {
-  /* Keep the ribbon tails and trim the upward curve of the film strip. */
-  clip-path: polygon(
-    0 0, 100% 0, 100% 100%, 82% 100%, 74% 96%, 65% 93%,
-    58% 91%, 50% 91%, 42% 91%, 35% 93%, 26% 96%, 18% 100%, 0 100%
-  );
-}
+.graduationEditorHeader img {width:169.35%;left:-2.2%;top:-6.3%}
 .theaterEditor > .panel {
   padding: clamp(12px, 3vw, 20px);
   border: 1px solid #f0dfe3;
@@ -376,3 +374,23 @@ input[type="file"][hidden]{display:none!important}
 .previewTimeline label{display:block;margin:.5rem 0 0}
 .previewTimeline span{float:right;font-variant-numeric:tabular-nums}
 .previewTimeline input[type="range"]{display:block;width:100%;margin:.25rem 0 0;min-height:32px}
+
+.theaterEditor .illustratedEditSteps button,
+.theaterEditor .illustratedEditSteps button.active {
+  position:relative;
+  aspect-ratio:232/144;
+  min-height:44px;
+  padding:0;
+  border:0;
+  border-radius:18px;
+  background:#fff;
+  box-shadow:none;
+  overflow:hidden;
+}
+.illustratedEditSteps button img {width:662.07%;top:-205.56%;left:var(--art-left)}
+.illustratedEditSteps [data-step="opening"] {--art-left:-246.55%}
+.illustratedEditSteps [data-step="main"] {--art-left:-350%}
+.illustratedEditSteps [data-step="ending"] {--art-left:-453.88%}
+.illustratedEditSteps [data-step="finish"] {--art-left:-557.76%}
+.theaterEditor .illustratedEditSteps button.active {outline:2px solid #96517e;outline-offset:1px}
+.theaterEditor .illustratedEditSteps button:focus-visible {outline:3px solid #1374a2;outline-offset:2px}
