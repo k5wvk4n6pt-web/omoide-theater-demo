@@ -291,9 +291,17 @@ function playMusic(){
 useEffect(()=>{
  const video=previewVideo.current;
  setPreviewVideoBlocked(false);
- if(!video||!playing||phase!=='photos')return;
+ if(!video)return;
+ if(!playing||phase!=='photos'){
+  if(!playing){
+   if(!titleCardStill&&activePhoto?.kind==='video')video.src=activePhoto.url;
+   else if(video.hasAttribute('src')){video.removeAttribute('src');video.load()}
+  }
+  return;
+ }
  const clip=photos[playIndex];
  if(clip?.kind!=='video')return;
+ if(video.src!==clip.url)video.src=clip.url;
  let active=true;
  const begin=()=>{
   const start=clip.trimStart??0;
@@ -303,14 +311,22 @@ useEffect(()=>{
  if(video.readyState>=1)begin();
  else video.addEventListener('loadedmetadata',begin,{once:true});
  return()=>{active=false;video.removeEventListener('loadedmetadata',begin);video.pause()};
-},[playing,phase,playIndex,sceneKey]);
+},[playing,phase,playIndex,sceneKey,titleCardStill,activePhoto?.url]);
 useEffect(()=>{setSubtitleTime(0)},[playIndex,selected,sceneKey]);
 useEffect(()=>{if(!playing||phase!=='photos'||(photos[playIndex]?.kind==='video'&&previewVideoScene!==sceneKey))return;const start=performance.now();const timer=window.setInterval(()=>setSubtitleTime(Math.min(computed[playIndex]??5,(performance.now()-start)/1000)),100);return()=>clearInterval(timer)},[playing,phase,playIndex,sceneKey,previewVideoScene]);
 async function addMusicSwitch(files:FileList|null){const file=files?.[0];if(!file)return;const url=URL.createObjectURL(file);const seconds=await new Promise<number>(resolve=>{const a=new Audio();a.preload='metadata';a.onloadedmetadata=()=>resolve(Number.isFinite(a.duration)?Math.round(a.duration):0);a.onerror=()=>resolve(0);a.src=url});setMusicSwitches(v=>[...v,{id:id(),name:file.name,url,seconds,start:Math.min(total,6),anchor:'time',offset:0,volume:volume,fade:1}])}
 function startPreview(){
  if(!photos.length)return;
  if(playing){setPlaying(false);setPhase('intro');stopMusic()}
- else{setPlayIndex(0);setPhase('intro');setPlaying(true);stopMusic();if(bgmStart<=0)playMusic();else{bgmDelay.current=window.setTimeout(()=>{bgmDelay.current=null;playMusic()},bgmStart*1000)}
+ else{
+  const video=previewVideo.current;
+  if(video&&photos.some(photo=>photo.kind==='video')){
+   const silence=new URL('../preview-silence.mp4',import.meta.url).href;
+   video.src=silence;
+   // Start the same player from the tap before switching it to the user's clips.
+   void video.play().catch(()=>{});
+  }
+  setPlayIndex(0);setPhase('intro');setPlaying(true);stopMusic();if(bgmStart<=0)playMusic();else{bgmDelay.current=window.setTimeout(()=>{bgmDelay.current=null;playMusic()},bgmStart*1000)}
  for(const m of orderedSwitches){const at=Math.max(0,switchAt(m));const timer=window.setTimeout(()=>{if(switchAudio.current)switchAudio.current.pause();if(audioRef.current)audioRef.current.pause();if(soundCtx.current)void soundCtx.current.suspend();const a=new Audio(m.url);switchAudio.current=a;a.volume=Math.min(1,m.volume/100);a.loop=true;const seek=()=>{try{a.currentTime=Math.min(m.offset,Math.max(0,(a.duration||m.seconds)-.1))}catch{}};a.addEventListener('loadedmetadata',seek,{once:true});seek();void a.play().catch(()=>setMusicError('切り替えBGMを再生できませんでした'))},at*1000);switchTimers.current.push(timer)} }
  setSceneKey(k=>k+1)
 }
@@ -493,7 +509,10 @@ return <main className={step==='home'?'theaterHome':'theaterEditor'}>
 {playing&&phase==='photos'&&transitionEffect==='page'&&photos.length>0&&((playIndex===0&&opening==='album')||photos[playIndex-1])?<div key={'turn-'+sceneKey} className="albumFullPageTurn" aria-hidden="true">{playIndex===0?<div className="albumTurnTitlePage"><span>{title}</span></div>:<div className="albumTurnPreviousPage"><div className="albumTurnPhotoClip">{photos[playIndex-1].kind==='video'?<div className="albumTurnVideoPlaceholder">🎞️</div>:<img src={photos[playIndex-1].url} alt="" style={{transform:'scale('+(photos[playIndex-1].zoom??1)+') translate('+(photos[playIndex-1].offsetX??0)+'%,'+(photos[playIndex-1].offsetY??0)+'%)'}}/>}</div>{photos[playIndex-1].caption?<div className="albumTurnCaption" style={{left:(photos[playIndex-1].captionX??50)+'%',top:(photos[playIndex-1].captionY??83)+'%',fontFamily:photos[playIndex-1].captionFont==='cursive'?'Yomogi, cursive':photos[playIndex-1].captionFont??'sans-serif',fontSize:(photos[playIndex-1].captionSize??22)+'px',fontWeight:photos[playIndex-1].captionWeight??700,color:photos[playIndex-1].captionColor??'#fff',background:photos[playIndex-1].captionBackground?'rgba(0,0,0,.58)':'transparent'}}>{photos[playIndex-1].caption}</div>:null}</div>}</div>:null}
 {showOpening&&opening==='album'?<div className="albumCustomTitle"><span>{title}</span></div>:null}
 {playing&&phase==='photos'&&playIndex>0&&transitionEffect!=='none'&&transitionEffect!=='page'&&photos[playIndex-1].kind!=='video'?<div key={'under-'+sceneKey} className="transitionUnderlay"><div className="underlayClip"><img src={photos[playIndex-1].url} alt="" style={{transform:'scale('+(photos[playIndex-1].zoom??1)+') translate('+(photos[playIndex-1].offsetX??0)+'%,'+(photos[playIndex-1].offsetY??0)+'%)'}}/></div></div>:null}
-{titleCardStill?null:activePhoto?<div key={sceneKey+'-'+(activePhoto?.id||'')} onPointerDown={e=>{if(editTool==='position')beginDrag(e,'photo')}} onPointerMove={moveDrag} onPointerUp={endDrag} onPointerCancel={endDrag} className={'scenePhoto '+' '+(playing&&phase==='photos'?'animate '+(transitionEffect==='page'?'albumStill':transitionEffect):'')+(editTool==='position'?' draggablePhoto':'')} style={{'--scene-duration':activeDuration+'s'} as CSSProperties}>{activePhoto.kind==='video'?<video ref={previewVideo} src={activePhoto.url} playsInline controls={!playing||previewVideoBlocked} preload="auto" onPlaying={()=>{if(playing&&phase==='photos'){setPreviewVideoScene(sceneKey);setPreviewVideoBlocked(false)}}} onError={()=>{if(playing&&phase==='photos')setPreviewVideoBlocked(true)}} style={{transform:'scale('+(activePhoto.zoom??1)+') translate('+(activePhoto.offsetX??0)+'%,'+(activePhoto.offsetY??0)+'%)'}}/>:<img src={activePhoto.url} alt="選択中の写真" style={{transform:'scale('+(activePhoto.zoom??1)+') translate('+(activePhoto.offsetX??0)+'%,'+(activePhoto.offsetY??0)+'%)'}} />}</div>:<span>上のボタンから写真や動画を追加できます</span>}
+<div onPointerDown={e=>{if(editTool==='position')beginDrag(e,'photo')}} onPointerMove={moveDrag} onPointerUp={endDrag} onPointerCancel={endDrag} className={'scenePhoto '+' '+(playing&&phase==='photos'?'animate '+(transitionEffect==='page'?'albumStill':transitionEffect):'')+(editTool==='position'?' draggablePhoto':'')} style={{'--scene-duration':activeDuration+'s'} as CSSProperties} data-video-hidden={titleCardStill||activePhoto?.kind!=='video'||(playing&&phase!=='photos')} >
+<video ref={previewVideo} playsInline controls={!playing||previewVideoBlocked} preload="auto" onPlaying={()=>{if(playing&&phase==='photos'&&activePhoto?.kind==='video'){setPreviewVideoScene(sceneKey);setPreviewVideoBlocked(false)}}} onError={()=>{if(playing&&phase==='photos'&&activePhoto?.kind==='video')setPreviewVideoBlocked(true)}} style={{transform:'scale('+(activePhoto?.zoom??1)+') translate('+(activePhoto?.offsetX??0)+'%,'+(activePhoto?.offsetY??0)+'%)'}}/>
+</div>
+{titleCardStill?null:activePhoto?(activePhoto.kind==='video'?null:<div key={sceneKey+'-'+activePhoto.id} onPointerDown={e=>{if(editTool==='position')beginDrag(e,'photo')}} onPointerMove={moveDrag} onPointerUp={endDrag} onPointerCancel={endDrag} className={'scenePhoto '+' '+(playing&&phase==='photos'?'animate '+(transitionEffect==='page'?'albumStill':transitionEffect):'')+(editTool==='position'?' draggablePhoto':'')} style={{'--scene-duration':activeDuration+'s'} as CSSProperties}><img src={activePhoto.url} alt="選択中の写真" style={{transform:'scale('+(activePhoto.zoom??1)+') translate('+(activePhoto.offsetX??0)+'%,'+(activePhoto.offsetY??0)+'%)'}} /></div>):<span>上のボタンから写真や動画を追加できます</span>}
 {showOpening&&opening==='curtain'?<div key={'curtain-'+sceneKey} className={'curtainOverlay curtain-'+curtainColor}><div className="curtainPanel curtainLeft"/><div className="curtainPanel curtainRight"/><div className="curtainCaption">{title}</div></div>:null}
 {showEnding ? (
  endingStyle==='fuji_graduation'

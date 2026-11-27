@@ -384,3 +384,5 @@ input[type="file"][hidden]{display:none!important}
 .previewHeading{display:flex;align-items:center;justify-content:space-between;gap:.5rem;flex-wrap:wrap;margin-block:1rem .5rem}
 .previewHeading h3{margin:0}
 .previewHeading button{margin:0 0 0 auto;min-height:44px}
+
+.scenePhoto[data-video-hidden="true"]{opacity:0!important;pointer-events:none;animation:none!important}
