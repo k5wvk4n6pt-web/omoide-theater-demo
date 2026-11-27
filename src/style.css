@@ -343,7 +343,7 @@ input[type="file"][hidden]{display:none!important}
 .graduationPoster .graduationPosterAction {
   position: absolute;
   inset-inline: 8.3%;
-  height: 7.7%;
+  height: 7.5%;
   min-height: 44px;
   padding: 0;
   border: 0;
@@ -351,8 +351,8 @@ input[type="file"][hidden]{display:none!important}
   background: transparent;
   touch-action: manipulation;
 }
-.graduationCreateAction {top:42%}
-.graduationSubmitAction {top:50.65%}
+.graduationCreateAction {top:58.8%}
+.graduationSubmitAction {top:67.6%}
 .graduationPoster .graduationPosterAction:active {background:#50001c24}
 .graduationPoster .graduationPosterAction:disabled {background:#fff8}
 .graduationPoster .graduationPosterAction:focus-visible {outline:3px solid #fff;outline-offset:-4px}
