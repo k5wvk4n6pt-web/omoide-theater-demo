@@ -132,6 +132,9 @@ function endDrag(e?:React.PointerEvent<HTMLElement>){
 const musicInput=useRef<HTMLInputElement>(null);
 const audioRef=useRef<HTMLAudioElement|null>(null);
 const soundCtx=useRef<AudioContext|null>(null);
+const bgmMaster=useRef<GainNode|null>(null);
+const synthOutput=useRef<GainNode|null>(null);
+const activeSwitchGain=useRef<{id:string;node:GainNode}|null>(null);
 const synthTimer=useRef<number|null>(null);
 const [bgm,setBgm]=useState<'none'|'gentle'|'bright'|'file'>('gentle');
 const [audioFile,setAudioFile]=useState<{name:string;url:string;seconds:number}|null>(null);
@@ -161,7 +164,12 @@ const photosRef=useRef<Photo[]>([]);
 useEffect(()=>{photosRef.current=photos},[photos]);
 useEffect(()=>()=>{photosRef.current.forEach(p=>URL.revokeObjectURL(p.url))},[]);
 useEffect(()=>()=>{if(audioFile)URL.revokeObjectURL(audioFile.url)},[audioFile]);
-useEffect(()=>{if(audioRef.current)audioRef.current.volume=volume/100},[volume]);
+useEffect(()=>{if(bgmMaster.current)bgmMaster.current.gain.value=volume/100},[volume]);
+useEffect(()=>{
+ const active=activeSwitchGain.current;
+ const track=active&&musicSwitches.find(m=>m.id===active.id);
+ if(active&&track)active.node.gain.value=track.volume/100;
+},[musicSwitches]);
 const intro=6,outro=6;
 const computed=useMemo(()=>mode==='photo'?photos.map(p=>p.duration):photos.map(p=>p.kind==='video'?p.duration:Math.max(1,(musicSeconds-intro-outro-photos.filter(x=>x.kind==='video').reduce((a,b)=>a+b.duration,0))/Math.max(1,photos.filter(x=>x.kind!=='video').length))),[photos,mode,musicSeconds]);
 const sceneStarts=useMemo(()=>{
@@ -304,28 +312,49 @@ function stopMusic(clearSwitches=true){
  if(bgmDelay.current!==null){window.clearTimeout(bgmDelay.current);bgmDelay.current=null}
  if(audioRef.current){audioRef.current.pause();audioRef.current.currentTime=0;audioRef.current=null}
  if(synthTimer.current!==null){window.clearInterval(synthTimer.current);synthTimer.current=null}
- if(soundCtx.current){void soundCtx.current.close();soundCtx.current=null}
+ synthOutput.current?.disconnect();synthOutput.current=null;
+ if(clearSwitches&&soundCtx.current){
+  void soundCtx.current.close();soundCtx.current=null;bgmMaster.current=null;activeSwitchGain.current=null;
+ }
+
  setMusicPlaying(false);
+}
+function previewAudioContext(){
+ if(soundCtx.current&&bgmMaster.current)return {ctx:soundCtx.current,master:bgmMaster.current};
+ const ctx=new AudioContext();
+ const master=ctx.createGain();
+ master.gain.value=volume/100;
+ master.connect(ctx.destination);
+ soundCtx.current=ctx;
+ bgmMaster.current=master;
+ return {ctx,master};
+}
+function musicPlaybackError(error:unknown){
+ setMusicError(error instanceof DOMException&&error.name==='NotAllowedError'
+  ?'ブラウザがBGMの再生を止めました。「BGMを試聴」をタップして確認してください。'
+  :'この音声は再生できません。別のファイルをお試しください。');
 }
 function playMusic(elapsed=0){
  stopMusic(false);setMusicError('');
  if(bgm==='none')return;
- if(bgm==='file'){
-  if(!audioFile){setMusicError('先に音楽ファイルを選んでください');return}
-  const audio=new Audio(audioFile.url);audio.loop=true;audio.volume=volume/100;audioRef.current=audio;const seek=()=>{try{audio.currentTime=(bgmOffset+elapsed)%(audio.duration||audioFile.seconds||1)}catch{}};audio.addEventListener('loadedmetadata',seek,{once:true});seek();
-  void audio.play().then(()=>setMusicPlaying(true)).catch(()=>{setMusicError('この音声は再生できません。別のファイルをお試しください');setMusicPlaying(false)});
-  return;
- }
+ if(bgm==='file'&&!audioFile){setMusicError('先に音楽ファイルを選んでください');return}
  try{
-  const ctx=new AudioContext();soundCtx.current=ctx;void ctx.resume();
+  const {ctx,master}=previewAudioContext();
+  void ctx.resume().catch(musicPlaybackError);
+  if(bgm==='file'&&audioFile){
+  const audio=new Audio(audioFile.url);audio.loop=true;ctx.createMediaElementSource(audio).connect(master);audioRef.current=audio;const seek=()=>{try{audio.currentTime=(bgmOffset+elapsed)%(audio.duration||audioFile.seconds||1)}catch{}};audio.addEventListener('loadedmetadata',seek,{once:true});seek();
+  void audio.play().then(()=>{if(audioRef.current===audio)setMusicPlaying(true)}).catch(error=>{if(audioRef.current===audio){musicPlaybackError(error);setMusicPlaying(false)}});
+  return;
+  }
+  const output=ctx.createGain();output.connect(master);synthOutput.current=output;
   const gentle=[261.63,329.63,392,523.25,392,329.63,293.66,349.23];
   const bright=[392,493.88,587.33,783.99,659.25,587.33,493.88,523.25];
   const notes=bgm==='gentle'?gentle:bright;
   let index=Math.floor(elapsed/(bgm==='gentle'?1.3:.85));
   const note=()=>{if(ctx.state==='closed')return;const osc=ctx.createOscillator(),gain=ctx.createGain();
    osc.type=bgm==='gentle'?'sine':'triangle';osc.frequency.value=notes[index++%notes.length];
-   const t=ctx.currentTime;gain.gain.setValueAtTime(0.0001,t);gain.gain.exponentialRampToValueAtTime(Math.max(.0001,volume/100*.09),t+.12);gain.gain.exponentialRampToValueAtTime(.0001,t+1.1);
-   osc.connect(gain);gain.connect(ctx.destination);osc.start(t);osc.stop(t+1.12);
+   const t=ctx.currentTime;gain.gain.setValueAtTime(0.0001,t);gain.gain.exponentialRampToValueAtTime(.10,t+.12);gain.gain.exponentialRampToValueAtTime(.0001,t+1.1);
+   osc.connect(gain);gain.connect(output);osc.start(t);osc.stop(t+1.12);
   };note();synthTimer.current=window.setInterval(note,bgm==='gentle'?1300:850);setMusicPlaying(true);
  }catch{setMusicError('この端末ではBGMを再生できません')}
 }
@@ -338,7 +367,7 @@ function syncPreviewBgm(pause:boolean){
   else if(currentMusic.paused)void currentMusic.play().catch(()=>{});
  }
  if(soundCtx.current){
-  if(pause||switchAudio.current)void soundCtx.current.suspend();
+  if(pause)void soundCtx.current.suspend();
   else void soundCtx.current.resume();
  }
 }
@@ -370,7 +399,7 @@ useEffect(()=>{
 },[playing,phase,playIndex,sceneKey,titleCardStill,activePhoto?.url,sceneOffset]);
 useEffect(()=>{setSubtitleTime(playing?sceneOffset:0)},[playIndex,selected,sceneKey]);
 useEffect(()=>{if(!playing||phase!=='photos'||(photos[playIndex]?.kind==='video'&&previewVideoScene!==sceneKey))return;const start=performance.now();const timer=window.setInterval(()=>setSubtitleTime(Math.min(computed[playIndex]??5,sceneOffset+(performance.now()-start)/1000)),100);return()=>clearInterval(timer)},[playing,phase,playIndex,sceneKey,previewVideoScene,sceneOffset]);
-async function addMusicSwitch(files:FileList|null){const file=files?.[0];if(!file)return;const url=URL.createObjectURL(file);const seconds=await new Promise<number>(resolve=>{const a=new Audio();a.preload='metadata';a.onloadedmetadata=()=>resolve(Number.isFinite(a.duration)?Math.round(a.duration):0);a.onerror=()=>resolve(0);a.src=url});setMusicSwitches(v=>[...v,{id:id(),name:file.name,url,seconds,start:Math.min(total,6),anchor:'time',offset:0,volume:volume,fade:1}])}
+async function addMusicSwitch(files:FileList|null){const file=files?.[0];if(!file)return;const url=URL.createObjectURL(file);const seconds=await new Promise<number>(resolve=>{const a=new Audio();a.preload='metadata';a.onloadedmetadata=()=>resolve(Number.isFinite(a.duration)?Math.round(a.duration):0);a.onerror=()=>resolve(0);a.src=url});setMusicSwitches(v=>[...v,{id:id(),name:file.name,url,seconds,start:Math.min(total,6),anchor:'time',offset:0,volume:100,fade:1}])}
 function seekPreview(position:number){
  setPlaying(false);
  stopMusic();
@@ -396,18 +425,30 @@ function startPreview(){
  stopMusic();
  const pause=pauseBgmDuringVideo&&nextPhase==='photos'&&photos[nextIndex]?.kind==='video';
  previewBgmPaused.current=pause;
+ if(bgm!=='none'||orderedSwitches.length){
+  try{void previewAudioContext().ctx.resume().catch(musicPlaybackError)}catch(error){musicPlaybackError(error)}
+ }
  const activeSwitch=[...orderedSwitches].reverse().find(m=>switchAt(m)<=position);
  function startSwitch(m:MusicSwitch,elapsed:number){
+  try{
   switchAudio.current?.pause();
   audioRef.current?.pause();
-  if(soundCtx.current)void soundCtx.current.suspend();
+  if(synthTimer.current!==null){window.clearInterval(synthTimer.current);synthTimer.current=null;}
+  synthOutput.current?.disconnect();synthOutput.current=null;
+  const {ctx,master}=previewAudioContext();
+  activeSwitchGain.current?.node.disconnect();
   const audio=new Audio(m.url);
+  const gain=ctx.createGain();
+  gain.gain.value=m.volume/100;
+  ctx.createMediaElementSource(audio).connect(gain);
+  gain.connect(master);
+  activeSwitchGain.current={id:m.id,node:gain};
   switchAudio.current=audio;
-  audio.volume=Math.min(1,m.volume/100);
   audio.loop=true;
   const seek=()=>{if(Number.isFinite(audio.duration)&&audio.duration>0)audio.currentTime=(m.offset+elapsed)%audio.duration};
   audio.addEventListener('loadedmetadata',seek,{once:true});seek();
-  if(!previewBgmPaused.current)void audio.play().catch(()=>setMusicError('切り替えBGMを再生できませんでした'));
+  if(!previewBgmPaused.current)void audio.play().catch(error=>{if(switchAudio.current===audio)musicPlaybackError(error)});
+  }catch(error){musicPlaybackError(error)}
  }
  if(activeSwitch)startSwitch(activeSwitch,position-switchAt(activeSwitch));
  else if(position>=bgmStart){playMusic(position-bgmStart);syncPreviewBgm(pause)}
