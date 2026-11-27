@@ -340,60 +340,22 @@ input[type="file"][hidden]{display:none!important}
   width: 100%;
   height: auto;
 }
-.graduationPosterArtwork {
-  position: absolute;
-  inset: 23.3% 4.35% 40.25%;
-  width: 91.3%;
-  height: 36.45%;
-  /* Follow the inside of the film strip and leave the foreground blossoms visible. */
-  clip-path: polygon(
-    0% 18%, 2% 14%, 6% 10%, 12% 8%, 21% 7%, 30% 4%, 40% 1%, 50% 0%,
-    60% 1%, 70% 3%, 80% 7%, 89% 8%, 94% 10%, 98% 14%, 100% 18%,
-    99.6% 25%, 98.3% 36%, 96.4% 50%, 94.1% 66%, 93% 77%,
-    91.6% 81%, 89.4% 82%, 87.7% 84%, 86.7% 88%, 87.4% 96%,
-    83% 100%, 74% 99%, 65% 97%, 55% 97%, 48% 98%, 40% 97%, 31% 96%,
-    23% 97%, 16% 99%, 12.1% 97%, 12% 93%, 11% 89%, 9.5% 88%,
-    8.5% 85%, 7.1% 85%, 4.7% 62%, 2.7% 48%, 1.2% 34%, 0% 25%
-  );
-}
 .graduationPoster .graduationPosterAction {
   position: absolute;
-  inset: 69.1% 10% auto;
-  height: 9.6%;
+  inset-inline: 8.3%;
+  height: 7.7%;
   min-height: 44px;
   padding: 0;
   border: 0;
-  border-radius: 100px;
+  border-radius: 999px;
   background: transparent;
   touch-action: manipulation;
 }
-.graduationPoster .graduationPosterAction:active { background: #50001c24; }
-.graduationPoster .graduationPosterAction:disabled { background: #fff8; }
-.graduationPoster .graduationPosterAction:focus-visible { outline-offset: -4px; }
-.graduationSubmitLink {
-  display: grid;
-  grid-template-columns: 1.4em 1fr 1em;
-  align-items: center;
-  gap: .45em;
-  width: 80%;
-  min-height: 52px;
-  margin: .9rem auto 1.15rem;
-  padding: .55em .65em;
-  border: 3px solid #fff4f8;
-  border-radius: 999px;
-  background: linear-gradient(180deg, #d94772, #b50843);
-  box-shadow: inset 0 1px 2px #ffffff70, 0 3px 8px #a5144b48;
-  color: #fff;
-  font-size: clamp(.9rem, 4vw, 1.35rem);
-  font-weight: 850;
-  text-align: center;
-  text-decoration: none;
-  text-shadow: 0 1px 2px #720528;
-}
-.graduationSubmitIcon {font-size:1.2em}
-.graduationSubmitArrow {font-size:1.6em;line-height:1}
-.graduationSubmitLink:active {filter:brightness(.92)}
-.graduationSubmitLink:focus-visible {outline:3px solid #1374a2;outline-offset:3px}
+.graduationCreateAction {top:42%}
+.graduationSubmitAction {top:50.65%}
+.graduationPoster .graduationPosterAction:active {background:#50001c24}
+.graduationPoster .graduationPosterAction:disabled {background:#fff8}
+.graduationPoster .graduationPosterAction:focus-visible {outline:3px solid #fff;outline-offset:-4px}
 .graduationHome .draftBox {
   border: 1px solid #edc9ac;
   background: #fff8ef;

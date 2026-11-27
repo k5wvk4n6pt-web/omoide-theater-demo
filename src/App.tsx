@@ -755,11 +755,10 @@ return <main className={step==='home'?'theaterHome':'theaterEditor'}>
 </header>:null}
 {step==='home'?<section className="graduationHome">
   <div className="graduationPoster">
-    <img className="graduationPosterCover" src={graduationPosterCover} width={1086} height={1448} alt="卒園ムービー。みんなの思い出を、ひとつに。" fetchPriority="high"/>
-    <img className="graduationPosterArtwork" src={graduationArtwork} width={1376} height={768} alt="令和9年 卒園式 思い出アルバム。桜と虹の下にふじほいくえんの園庭。"/>
-    <button type="button" className="graduationPosterAction" aria-label="ムービーを作る" disabled={draftBusy} onClick={newProject}/>
+    <img className="graduationPosterCover" src={import.meta.env.BASE_URL+'artwork/graduation-menu.webp'} width={864} height={1536} alt="令和9年 卒園式 思い出アルバム。桜と虹に囲まれたふじほいくえん。" fetchPriority="high"/>
+    <button type="button" className="graduationPosterAction graduationCreateAction" aria-label="ムービーを作る" disabled={draftBusy} onClick={newProject}/>
+    <a className="graduationPosterAction graduationSubmitAction" href={submissionSite} aria-label="写真・動画の提出"/>
   </div>
-  <a className="graduationSubmitLink" href={submissionSite}><span className="graduationSubmitIcon" aria-hidden="true">📸</span>写真・動画の提出ページへ<span className="graduationSubmitArrow" aria-hidden="true">›</span></a>
   {projects.length>0?<div className="draftBox"><h3>📁 保存した作品（{projects.length}件）</h3><div className="projectList">{projects.map(p=><div className="projectCard" key={p.id}>{thumbUrls[p.id]?<img src={thumbUrls[p.id]} alt="作品の表紙"/>:<div className="projectFallback">🎬</div>}<div className="projectDetail"><strong>{p.title}</strong><small>{p.photoCount}枚 · {new Date(p.savedAt).toLocaleString('ja-JP')}</small><div className="projectButtons"><button onClick={()=>restoreProject(p.id)} disabled={draftBusy}>編集する</button><button onClick={()=>copyProject(p.id)} disabled={draftBusy}>複製</button><button onClick={()=>eraseProject(p.id)} disabled={draftBusy}>削除</button></div></div></div>)}</div></div>:null}{draftInfo?<p className="note" role="status">{draftInfo}</p>:null}</section>:null}
 {step==='edit'?<section className="panel"><div className="sectionHeading"><h2>ムービーを作成</h2></div><nav className="editSteps" aria-label="編集の手順">{([['opening','① オープニング'],['main','② 本編'],['ending','③ エンディング'],['finish','④ 完成・保存']] as const).map(([key,label])=><button key={key} className={editPage===key?'active':''} aria-current={editPage===key?'step':undefined} onClick={()=>{setPlaying(false);setScrubbing(false);setEditPage(key)}}>{label}</button>)}</nav>{editPage!=='opening'?<div className="actions" role="group" aria-label="写真・動画の追加">
 <label className={'mediaPicker'+(photos.length===0?' primary':'')}>
