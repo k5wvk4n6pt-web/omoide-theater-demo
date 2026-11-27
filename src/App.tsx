@@ -1,12 +1,12 @@
 import {useEffect,useMemo,useRef,useState} from 'react';
 import type {ChangeEvent,CSSProperties} from 'react';
-import {exportMovie} from './exportMovie';
+import {clipGainValue,exportMovie} from './exportMovie';
 import {listProjects,saveProject as persistProject,loadProject,deleteProject,duplicateProject} from './draftStore';
 import type {ProjectSummary,StoredProject} from './draftStore';
 import {loadSharedProject,newShareToken,saveSharedProject,shareTokenFromHash,SharedProjectConflict} from './sharedProject';
 type SubtitleCue={id:string;text:string;start:number;end:number};
 type MusicSwitch={id:string;name:string;url:string;seconds:number;start:number;anchor:'time'|'photo';photoId?:string;offset:number;volume:number;fade:number};
-type Photo={subtitles?:SubtitleCue[];subtitleColor?:string;subtitleSize?:number;subtitleOutline?:string;trimStart?:number;sourceDuration?:number;keepAudio?:boolean;kind?:'image'|'video';id:string;name:string;url:string;duration:number;effect:'fade'|'zoom'|'slide'|'page'|'heart'|'curtain'|'none'|'wipe'|'slideUp'|'circle'|'blinds'|'flash'|'blur'|'mosaic'|'random';sticker?:string;caption?:string;zoom?:number;offsetX?:number;offsetY?:number;captionX?:number;captionY?:number;captionFont?:string;captionColor?:string;captionSize?:number;captionWeight?:number;captionOutline?:boolean;captionOutlineColor?:string;captionBackground?:boolean;captionMotion?:'none'|'fade'|'rise'|'slide'};
+type Photo={subtitles?:SubtitleCue[];subtitleColor?:string;subtitleSize?:number;subtitleOutline?:string;trimStart?:number;sourceDuration?:number;keepAudio?:boolean;audioVolume?:number;kind?:'image'|'video';id:string;name:string;url:string;duration:number;effect:'fade'|'zoom'|'slide'|'page'|'heart'|'curtain'|'none'|'wipe'|'slideUp'|'circle'|'blinds'|'flash'|'blur'|'mosaic'|'random';sticker?:string;caption?:string;zoom?:number;offsetX?:number;offsetY?:number;captionX?:number;captionY?:number;captionFont?:string;captionColor?:string;captionSize?:number;captionWeight?:number;captionOutline?:boolean;captionOutlineColor?:string;captionBackground?:boolean;captionMotion?:'none'|'fade'|'rise'|'slide'};
 const id=()=>Math.random().toString(36).slice(2);
 function VideoThumbnail({url,name}:{url:string;name:string}){
  const [poster,setPoster]=useState<string|null>(null);
@@ -80,6 +80,35 @@ const [phase,setPhase]=useState<'intro'|'photos'|'outro'>('intro');
 const [sceneKey,setSceneKey]=useState(0);
 const [subtitleTime,setSubtitleTime]=useState(0);
 const previewVideo=useRef<HTMLVideoElement|null>(null);
+const previewClipAudio=useRef<{context:AudioContext;gain:GainNode}|null>(null);
+useEffect(()=>()=>{const graph=previewClipAudio.current;previewClipAudio.current=null;if(graph)void graph.context.close().catch(()=>{})},[step]);
+
+function setPreviewClipVolume(volume:unknown,activate=false){
+ const video=previewVideo.current;
+ if(!video)return;
+ const level=clipGainValue(volume);
+ let graph=previewClipAudio.current;
+ if(!graph&&activate&&level!==1){
+  try{
+   const context=new AudioContext();
+   const gain=context.createGain();
+   context.createMediaElementSource(video).connect(gain);
+   gain.connect(context.destination);
+   video.volume=1;
+   graph={context,gain};
+   previewClipAudio.current=graph;
+  }catch{
+   video.volume=level;
+   return;
+  }
+ }
+ if(graph){
+  graph.gain.gain.value=level;
+  if(activate&&graph.context.state!=='running')void graph.context.resume().catch(()=>{});
+ }else{
+  video.volume=level;
+ }
+}
 const dragRef=useRef<{x:number;y:number;startX:number;startY:number;kind:'photo'|'caption';width:number;height:number}|null>(null);
 const touchesRef=useRef<Map<number,{x:number;y:number}>>(new Map());
 const pinchRef=useRef<{distance:number;zoom:number}|null>(null);
@@ -300,6 +329,7 @@ function previewTrim(){
  const video=previewVideo.current;
  if(!video||playing||scrubbing)return;
  setTrimPreviewError('');
+ setPreviewClipVolume(current?.audioVolume,true);
  video.currentTime=trimStart;
  void video.play().catch(()=>setTrimPreviewError('選んだ範囲を再生できませんでした。'));
 }
@@ -310,6 +340,7 @@ const titleCardStill=openingStill||endingStill;
 const showOpening=openingStill||(playing&&phase==='intro');
 const showEnding=endingStill||(playing&&phase==='outro');
 const activePhoto=photos[playing?playIndex:scrubScene?.index??selected];
+useEffect(()=>{setPreviewClipVolume(activePhoto?.audioVolume)},[activePhoto?.id,activePhoto?.audioVolume]);
 const displayedSubtitleTime=scrubScene?.phase==='photos'?scrubScene.offset:subtitleTime;
 const scrubVideoTime=scrubScene?.phase==='photos'&&activePhoto?.kind==='video'?(activePhoto.trimStart??0)+scrubScene.offset:null;
 const transitionEffect=activePhoto?.effect==='random'?['fade','wipe','circle','slideUp','blur','flash'][playIndex%6]:activePhoto?.effect;
@@ -433,6 +464,9 @@ function startPreview(){
  const video=previewVideo.current;
  if(video&&photos.some(photo=>photo.kind==='video')){
   const clip=nextPhase==='photos'?photos[nextIndex]:undefined;
+  const adjustedVideo=photos.find(photo=>photo.kind==='video'&&clipGainValue(photo.audioVolume)!==1);
+  if(adjustedVideo)setPreviewClipVolume(adjustedVideo.audioVolume,true);
+  setPreviewClipVolume(clip?.audioVolume,true);
   video.src=clip?.kind==='video'?clip.url:new URL('../preview-silence.mp4',import.meta.url).href;
   if(clip?.kind==='video'){try{video.currentTime=(clip.trimStart??0)+offset}catch{}}
   void video.play().catch(()=>{});
@@ -659,7 +693,7 @@ return <main className={step==='home'?'theaterHome':'theaterEditor'}>
 {showOpening&&opening==='album'?<div className="albumCustomTitle"><span>{title}</span></div>:null}
 {playing&&phase==='photos'&&playIndex>0&&transitionEffect!=='none'&&transitionEffect!=='page'&&photos[playIndex-1].kind!=='video'?<div key={'under-'+sceneKey} className="transitionUnderlay"><div className="underlayClip"><img src={photos[playIndex-1].url} alt="" style={{transform:'scale('+(photos[playIndex-1].zoom??1)+') translate('+(photos[playIndex-1].offsetX??0)+'%,'+(photos[playIndex-1].offsetY??0)+'%)'}}/></div></div>:null}
 <div onPointerDown={e=>{if(!scrubbing&&editTool==='position')beginDrag(e,'photo')}} onPointerMove={moveDrag} onPointerUp={endDrag} onPointerCancel={endDrag} className={'scenePhoto '+' '+(playing&&phase==='photos'?'animate '+(transitionEffect==='page'?'albumStill':transitionEffect):'')+(editTool==='position'?' draggablePhoto':'')} style={{'--scene-duration':activeDuration+'s'} as CSSProperties} data-video-hidden={titleCardStill||activePhoto?.kind!=='video'||(playing&&phase!=='photos')} >
-<video ref={previewVideo} playsInline controls={(!playing&&!scrubbing)||previewVideoBlocked} preload="auto" onTimeUpdate={e=>{
+<video ref={previewVideo} playsInline onPointerDown={()=>setPreviewClipVolume(activePhoto?.audioVolume,true)} onPlay={()=>setPreviewClipVolume(activePhoto?.audioVolume,true)} controls={(!playing&&!scrubbing)||previewVideoBlocked} preload="auto" onTimeUpdate={e=>{
  if(!playing&&trimming&&!e.currentTarget.paused&&e.currentTarget.currentTime>=trimEnd)e.currentTarget.pause();
 }} onPlaying={()=>{if(playing&&phase==='photos'&&activePhoto?.kind==='video'){setPreviewVideoScene(sceneKey);setPreviewVideoBlocked(false)}}} onError={()=>{if(playing&&phase==='photos'&&activePhoto?.kind==='video')setPreviewVideoBlocked(true)}} style={{transform:'scale('+(activePhoto?.zoom??1)+') translate('+(activePhoto?.offsetX??0)+'%,'+(activePhoto?.offsetY??0)+'%)'}}/>
 </div>
@@ -683,6 +717,13 @@ return <main className={step==='home'?'theaterHome':'theaterEditor'}>
 </div>:null}
 {playing&&previewVideoBlocked?<p className="note" role="status">動画の再生ボタンを押すと、音声付きでプレビューを続けられます。</p>:null}
 {editPage==='main'?<><h3>写真の並び順</h3><div className="strip">{photos.map((p,i)=><button key={p.id} className={'thumb '+(selected===i?'selected':'')} onClick={()=>{setSelected(i);setScrubbing(false);setPlaying(false);setPhase('intro');setSceneKey(k=>k+1)}}>{p.kind==='video'?<VideoThumbnail url={p.url} name={p.name}/>:<img src={p.url} alt={p.name}/>}<span>{i+1}</span></button>)}</div>{current&&<div className="editor"><h3>選択中の{current.kind==='video'?'動画':'写真'}：{selected+1}番目</h3><div className="photoToolGrid">{([['text','T','文字'],['subtitles','▤','字幕'],['sticker','☺','スタンプ'],['transition','⇄','切り替え'],['duration','◷','表示時間'],['position','⛶','拡大・移動'],['apply','▢','一括適用']] as const).map(([key,icon,label])=><button key={key} className={editTool===key?'chosen':''} onClick={()=>{setScrubbing(false);if(key==='transition')setTransitionChoice(current.effect);setEditTool(editTool===key?null:key)}}><span>{icon}</span><small>{key==='duration'&&current.kind==='video'?'トリミング':label}</small></button>)}</div>
+{current.kind==='video'?<label>この動画の音量：{Math.round(clipGainValue(current.audioVolume)*100)}%
+ <input type="range" min="0" max="100" step="1" value={Math.round(clipGainValue(current.audioVolume)*100)} disabled={playing} onChange={e=>{
+  const audioVolume=Number(e.currentTarget.value);
+  if(activePhoto?.id===current.id)setPreviewClipVolume(audioVolume,true);
+  update(selected,{audioVolume});
+ }}/>
+</label>:null}
 {editTool?<div className="photoToolPanel">
 {editTool==='subtitles'?<div className="subtitleEditor"><h4>字幕（この写真・動画）</h4><label>表示を確認する位置：{subtitleTime.toFixed(1)}秒<input type="range" min="0" max={Math.max(1,current.duration)} step="0.1" value={Math.min(subtitleTime,current.duration)} onChange={e=>setSubtitleTime(Number(e.target.value))}/></label>{(current.subtitles??[]).map(c=><div className="subtitleCue" key={c.id}><label>字幕<input value={c.text} placeholder="字幕を入力" onChange={e=>update(selected,{subtitles:(current.subtitles??[]).map(x=>x.id===c.id?{...x,text:e.target.value}:x)})}/></label><div className="subtitleTimes"><label>開始（秒）<input type="number" min="0" max={current.duration} step="0.1" value={c.start} onChange={e=>update(selected,{subtitles:(current.subtitles??[]).map(x=>x.id===c.id?{...x,start:Math.min(current.duration,Math.max(0,Number(e.target.value)))}:x)})}/></label><label>終了（秒）<input type="number" min="0" max={current.duration} step="0.1" value={c.end} onChange={e=>update(selected,{subtitles:(current.subtitles??[]).map(x=>x.id===c.id?{...x,end:Math.min(current.duration,Math.max(0,Number(e.target.value)))}:x)})}/></label></div><button className="small" onClick={()=>update(selected,{subtitles:(current.subtitles??[]).filter(x=>x.id!==c.id)})}>この字幕を削除</button></div>)}<button onClick={()=>{const start=Math.min(Math.max(0,subtitleTime),Math.max(0,current.duration-1));update(selected,{subtitles:[...(current.subtitles??[]),{id:id(),text:'',start:Math.round(start*10)/10,end:Math.min(current.duration,Math.round((start+3)*10)/10)}]})}}>＋ 字幕を追加</button><label>字幕の色<input type="color" value={current.subtitleColor??'#ffffff'} onChange={e=>update(selected,{subtitleColor:e.target.value})}/></label><label>字幕サイズ：{current.subtitleSize??22}px<input type="range" min="12" max="42" value={current.subtitleSize??22} onChange={e=>update(selected,{subtitleSize:Number(e.target.value)})}/></label><label>縁取り色<input type="color" value={current.subtitleOutline??'#202020'} onChange={e=>update(selected,{subtitleOutline:e.target.value})}/></label></div>:null}
 {editTool==='text'?<div className="captionControls"><label>写真に表示する文字（プレビューで移動できます）<input value={current.caption??''} onChange={e=>update(selected,{caption:e.target.value})} placeholder="例：みんなと過ごした毎日"/></label><label>フォント<select value={current.captionFont??'sans-serif'} onChange={e=>update(selected,{captionFont:e.target.value})}><option value="sans-serif">ゴシック</option><option value="serif">明朝</option><option value="Yomogi, cursive">手書き風（やわらか）</option><option value="Zen Kurenaido, cursive">手書き風（すっきり）</option><option value="monospace">タイプライター</option></select></label><label>文字色<input type="color" value={current.captionColor??'#ffffff'} onChange={e=>update(selected,{captionColor:e.target.value})}/></label><label>文字の太さ<select value={current.captionWeight??700} onChange={e=>update(selected,{captionWeight:Number(e.target.value)})}><option value={400}>標準</option><option value={700}>太字</option><option value={900}>極太</option></select></label><label>文字サイズ：{current.captionSize??22}px<input type="range" min="12" max="52" value={current.captionSize??22} onChange={e=>update(selected,{captionSize:Number(e.target.value)})}/></label><label className="inlineOption"><input type="checkbox" checked={current.captionOutline??false} onChange={e=>update(selected,{captionOutline:e.target.checked})}/> 文字に縁取りを付ける</label>{current.captionOutline?<label>縁取りの色<input type="color" value={current.captionOutlineColor??'#222222'} onChange={e=>update(selected,{captionOutlineColor:e.target.value})}/></label>:null}<label className="inlineOption"><input type="checkbox" checked={current.captionBackground??false} onChange={e=>update(selected,{captionBackground:e.target.checked})}/> 文字の後ろに半透明の背景</label><label>文字の登場演出<select value={current.captionMotion??'none'} onChange={e=>update(selected,{captionMotion:e.target.value as Photo['captionMotion']})}><option value="none">なし</option><option value="fade">ふわっと現れる</option><option value="rise">下から現れる</option><option value="slide">横から流れる</option></select></label></div>:null}
