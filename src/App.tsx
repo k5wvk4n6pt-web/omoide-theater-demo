@@ -4,6 +4,10 @@ import {clipGainValue,exportMovie} from './exportMovie';
 import {listProjects,saveProject as persistProject,loadProject,deleteProject,duplicateProject} from './draftStore';
 import type {ProjectSummary,StoredProject} from './draftStore';
 import {loadSharedProject,newShareToken,saveSharedProject,shareTokenFromHash,SharedProjectConflict} from './sharedProject';
+type CardSide='opening'|'ending';
+type CardMedia={id:string;name:string;kind:'image'|'video';url:string;duration:number;effect:'none'};
+const cardFileId=(side:CardSide)=>'title-card:'+side;
+
 type SubtitleCue={id:string;text:string;start:number;end:number};
 type MusicSwitch={id:string;name:string;url:string;seconds:number;start:number;anchor:'time'|'photo';photoId?:string;offset:number;volume:number;fade:number};
 type Photo={subtitles?:SubtitleCue[];subtitleColor?:string;subtitleSize?:number;subtitleOutline?:string;trimStart?:number;sourceDuration?:number;keepAudio?:boolean;audioVolume?:number;kind?:'image'|'video';id:string;name:string;url:string;duration:number;effect:'fade'|'zoom'|'slide'|'page'|'heart'|'curtain'|'none'|'wipe'|'slideUp'|'circle'|'blinds'|'flash'|'blur'|'mosaic'|'random';sticker?:string;caption?:string;zoom?:number;offsetX?:number;offsetY?:number;captionX?:number;captionY?:number;captionFont?:string;captionColor?:string;captionSize?:number;captionWeight?:number;captionOutline?:boolean;captionOutlineColor?:string;captionBackground?:boolean;captionMotion?:'none'|'fade'|'rise'|'slide'};
@@ -53,11 +57,18 @@ const thumbRef=useRef<Record<string,string>>({});
 async function refreshProjects(){const list=await listProjects();setProjects(list);Object.values(thumbRef.current).forEach(url=>URL.revokeObjectURL(url));const urls:Record<string,string>={};list.forEach(p=>{if(p.thumbnail)urls[p.id]=URL.createObjectURL(p.thumbnail)});thumbRef.current=urls;setThumbUrls(urls)}
 
 const [title,setTitle]=useState('');
-const [endingStyle,setEndingStyle]=useState<'message'|'fuji_graduation'>('message');
+const [endingStyle,setEndingStyle]=useState<'message'|'fuji_graduation'|'none'|'upload'>('message');
 const [ending,setEnding]=useState('ありがとう、たくさんの思い出');
 const [sticker,setSticker]=useState('none');
 const [curtainColor,setCurtainColor]=useState<'red'|'pink'|'navy'|'gold'>('red');
-const [opening,setOpening]=useState<'curtain'|'sparkle'|'sakura'|'album'|'countdown'|'rainbow'|'fade'|'gold_light'|'floral_wedding'|'sakura_tunnel'|'balloon_party'|'starry_story'|'retro_cinema'|'fuji_graduation'>('fuji_graduation');
+const [opening,setOpening]=useState<'curtain'|'sparkle'|'sakura'|'album'|'countdown'|'rainbow'|'fade'|'gold_light'|'floral_wedding'|'sakura_tunnel'|'balloon_party'|'starry_story'|'retro_cinema'|'fuji_graduation'|'none'|'upload'>('fuji_graduation');
+const [openingMedia,setOpeningMedia]=useState<CardMedia|null>(null);
+const [endingMedia,setEndingMedia]=useState<CardMedia|null>(null);
+const [cardError,setCardError]=useState('');
+const openingRequest=useRef(0),endingRequest=useRef(0);
+useEffect(()=>()=>{if(openingMedia)URL.revokeObjectURL(openingMedia.url)},[openingMedia]);
+useEffect(()=>()=>{if(endingMedia)URL.revokeObjectURL(endingMedia.url)},[endingMedia]);
+
 const [step,setStep]=useState<'home'|'edit'>('home');
 const [selected,setSelected]=useState(0);
 const [transitionScope,setTransitionScope]=useState<'one'|'all'|'chosen'>('one');
@@ -200,18 +211,24 @@ useEffect(()=>{
  const track=active&&musicSwitches.find(m=>m.id===active.id);
  if(active&&track)active.node.gain.value=track.volume/100;
 },[musicSwitches]);
-const intro=6,outro=6;
-const computed=useMemo(()=>mode==='photo'?photos.map(p=>p.duration):photos.map(p=>p.kind==='video'?p.duration:Math.max(1,(musicSeconds-intro-outro-photos.filter(x=>x.kind==='video').reduce((a,b)=>a+b.duration,0))/Math.max(1,photos.filter(x=>x.kind!=='video').length))),[photos,mode,musicSeconds]);
+const openingClip=opening==='upload'?openingMedia:null;
+const endingClip=endingStyle==='upload'?endingMedia:null;
+const intro=opening==='none'?0:opening==='upload'?openingClip?.duration??0:6;
+const outro=endingStyle==='none'?0:endingStyle==='upload'?endingClip?.duration??0:6;
+const playingCard=phase==='intro'?openingClip:phase==='outro'?endingClip:null;
+const playingVideo=phase==='photos'?photos[playIndex]?.kind==='video':playingCard?.kind==='video';
+const computed=useMemo(()=>mode==='photo'?photos.map(p=>p.duration):photos.map(p=>p.kind==='video'?p.duration:Math.max(1,(musicSeconds-intro-outro-photos.filter(x=>x.kind==='video').reduce((a,b)=>a+b.duration,0))/Math.max(1,photos.filter(x=>x.kind!=='video').length))),[photos,mode,musicSeconds,intro,outro]);
 const sceneStarts=useMemo(()=>{
  const starts=[intro];
  for(const seconds of computed)starts.push(starts[starts.length-1]+seconds);
  return starts;
-},[computed]);
+},[computed,intro]);
 const outroStart=sceneStarts[sceneStarts.length-1];
 const total=outroStart+outro;
 function previewSceneAt(position:number){
  if(position<intro)return {phase:'intro',index:0,offset:position} as const;
- if(position>=outroStart)return {phase:'outro',index:0,offset:position-outroStart} as const;
+ if(position>=outroStart&&outro>0)return {phase:'outro',index:0,offset:position-outroStart} as const;
+ if(position>=outroStart){const index=computed.length-1;return {phase:'photos',index,offset:computed[index]??0} as const;}
  const index=sceneStarts.findIndex(start=>start>position)-1;
  return {phase:'photos',index,offset:position-sceneStarts[index]} as const;
 }
@@ -223,7 +240,7 @@ const switchAt=(m:MusicSwitch)=>m.anchor==='photo'&&m.photoId?intro+computed.sli
 const orderedSwitches=[...musicSwitches].sort((a,b)=>switchAt(a)-switchAt(b));
 useEffect(()=>{
 if(!playing||photos.length===0)return;
-if(phase==='photos'&&photos[playIndex]?.kind==='video'&&previewVideoScene!==sceneKey)return;
+if(playingVideo&&previewVideoScene!==sceneKey)return;
 const seconds=phase==='intro'?intro:phase==='outro'?outro:computed[playIndex];
 const sceneStart=phase==='intro'?0:phase==='outro'?outroStart:sceneStarts[playIndex];
 const startedAt=performance.now();
@@ -233,12 +250,12 @@ const timer=window.setTimeout(()=>{
  setSceneOffset(0);
  if(phase==='intro'){setPhase('photos');setPlayIndex(0)}
  else if(phase==='photos'&&playIndex<photos.length-1){setPlayIndex(i=>i+1)}
- else if(phase==='photos'){setPhase('outro')}
+ else if(phase==='photos'&&outro>0){setPhase('outro')}
  else{setPlaying(false);setPhase('intro');setPlayIndex(0);setPreviewPosition(0)}
  setSceneKey(k=>k+1);
 },Math.max(0,seconds-sceneOffset)*1000);
 return()=>{window.clearTimeout(timer);window.clearInterval(progress)};
-},[playing,phase,playIndex,photos,computed,previewVideoScene,sceneKey,sceneOffset,sceneStarts,outroStart]);
+},[playing,phase,playIndex,photos,computed,previewVideoScene,sceneKey,sceneOffset,sceneStarts,outroStart,intro,outro,playingVideo]);
 function readVideoDuration(url:string){
  return new Promise<number>(resolve=>{
   const video=document.createElement('video');
@@ -257,6 +274,50 @@ function readVideoDuration(url:string){
   video.src=url;
   video.load();
  });
+}
+function readCardMedia(url:string,kind:CardMedia['kind']):Promise<number>{
+ return new Promise((resolve,reject)=>{
+  const media=kind==='video'?document.createElement('video'):new Image();
+  const timer=window.setTimeout(()=>finish(0),10000);
+  function finish(seconds:number){
+   clearTimeout(timer);
+   media.removeAttribute('src');
+   if(seconds>0)resolve(seconds);else reject(Error('画像または動画を読み込めませんでした。'));
+  }
+  media.onerror=()=>finish(0);
+  if(media instanceof HTMLVideoElement){
+   media.preload='metadata';
+   media.onloadedmetadata=()=>finish(Number.isFinite(media.duration)?media.duration:0);
+  }else media.onload=()=>finish(6);
+  media.src=url;
+ });
+}
+async function uploadCard(side:CardSide,file:File|undefined){
+ if(!file)return;
+ const request=side==='opening'?openingRequest:endingRequest;
+ const sequence=++request.current;
+ const kind=file.type.startsWith('video/')||/\.(mov|mp4|m4v|webm)$/i.test(file.name)?'video':'image';
+ const url=URL.createObjectURL(file);
+ setCardError('');
+ try{
+  const duration=await readCardMedia(url,kind);
+  if(sequence!==request.current){URL.revokeObjectURL(url);return;}
+  const media:CardMedia={id:cardFileId(side),name:file.name,kind,url,duration,effect:'none'};
+  setPlaying(false);stopMusic();setScrubbing(false);setPreviewPosition(0);
+  if(side==='opening')setOpeningMedia(media);else setEndingMedia(media);
+ }catch(error){
+  URL.revokeObjectURL(url);
+  if(sequence===request.current)setCardError(error instanceof Error?error.message:'素材を読み込めませんでした。');
+ }
+}
+function cardPicker(side:CardSide,media:CardMedia|null){
+ return <><label>画像・動画を選ぶ
+  <input type="file" accept="image/*,video/*,.mov,.mp4,.m4v,.webm" onChange={e=>{
+   const file=e.currentTarget.files?.[0];e.currentTarget.value='';
+   void uploadCard(side,file);
+  }}/>
+ </label>{media?<p className="note">{media.name}（{media.duration.toFixed(1)}秒）</p>:null}
+ {cardError?<p className="musicError" role="alert">{cardError}</p>:null}</>;
 }
 async function addPhotos(files:FileList|null){
  if(!files?.length||importing)return;
@@ -340,9 +401,12 @@ const titleCardStill=openingStill||endingStill;
 const showOpening=openingStill||(playing&&phase==='intro');
 const showEnding=endingStill||(playing&&phase==='outro');
 const activePhoto=photos[playing?playIndex:scrubScene?.index??selected];
-useEffect(()=>{setPreviewClipVolume(activePhoto?.audioVolume)},[activePhoto?.id,activePhoto?.audioVolume]);
+const visibleCard=showOpening?openingClip:showEnding?endingClip:null;
+const previewMedia=visibleCard??(titleCardStill||playing&&phase!=='photos'?undefined:activePhoto);
+
+useEffect(()=>{setPreviewClipVolume(visibleCard?undefined:activePhoto?.audioVolume)},[activePhoto?.id,activePhoto?.audioVolume,visibleCard]);
 const displayedSubtitleTime=scrubScene?.phase==='photos'?scrubScene.offset:subtitleTime;
-const scrubVideoTime=scrubScene?.phase==='photos'&&activePhoto?.kind==='video'?(activePhoto.trimStart??0)+scrubScene.offset:null;
+const scrubVideoTime=scrubScene&&previewMedia?.kind==='video'?(visibleCard?0:activePhoto?.trimStart??0)+scrubScene.offset:null;
 const transitionEffect=activePhoto?.effect==='random'?['fade','wipe','circle','slideUp','blur','flash'][playIndex%6]:activePhoto?.effect;
 const activeDuration=computed[playing?playIndex:selected]||duration;
 const activeSubtitle=activePhoto?.subtitles?.find(c=>displayedSubtitleTime>=c.start&&displayedSubtitleTime<c.end);
@@ -417,10 +481,10 @@ useEffect(()=>{
  const video=previewVideo.current;
  setPreviewVideoBlocked(false);
  if(!video)return;
- if(!playing||phase!=='photos'){
+ if(!playing||!playingVideo){
   if(!playing){
-   if(!titleCardStill&&activePhoto?.kind==='video'){
-    if(video.src!==activePhoto.url)video.src=activePhoto.url;
+   if(previewMedia?.kind==='video'){
+    if(video.src!==previewMedia.url)video.src=previewMedia.url;
     if(scrubVideoTime!==null){
      video.pause();
      const seek=()=>{try{video.currentTime=scrubVideoTime}catch{}};
@@ -432,21 +496,21 @@ useEffect(()=>{
   }
   return;
  }
- const clip=photos[playIndex];
+ const clip=previewMedia;
  if(clip?.kind!=='video')return;
  if(video.src!==clip.url)video.src=clip.url;
  let active=true;
  const begin=()=>{
   video.defaultMuted=false;
   video.muted=false;
-  const start=(clip.trimStart??0)+sceneOffset;
+  const start=(visibleCard?0:activePhoto?.trimStart??0)+sceneOffset;
   try{if(Math.abs(video.currentTime-start)>.15)video.currentTime=start}catch{}
   void video.play().catch(()=>{if(active)setPreviewVideoBlocked(true)});
  };
  if(video.readyState>=1)begin();
  else video.addEventListener('loadedmetadata',begin,{once:true});
  return()=>{active=false;video.removeEventListener('loadedmetadata',begin);video.pause()};
-},[playing,phase,playIndex,sceneKey,titleCardStill,activePhoto?.url,sceneOffset,scrubVideoTime]);
+},[playing,phase,playIndex,sceneKey,titleCardStill,previewMedia?.url,sceneOffset,scrubVideoTime,playingVideo]);
 useEffect(()=>{setSubtitleTime(playing?sceneOffset:0)},[playIndex,selected,sceneKey]);
 useEffect(()=>{if(!playing||phase!=='photos'||(photos[playIndex]?.kind==='video'&&previewVideoScene!==sceneKey))return;const start=performance.now();const timer=window.setInterval(()=>setSubtitleTime(Math.min(computed[playIndex]??5,sceneOffset+(performance.now()-start)/1000)),100);return()=>clearInterval(timer)},[playing,phase,playIndex,sceneKey,previewVideoScene,sceneOffset]);
 async function addMusicSwitch(files:FileList|null){const file=files?.[0];if(!file)return;const url=URL.createObjectURL(file);const seconds=await new Promise<number>(resolve=>{const a=new Audio();a.preload='metadata';a.onloadedmetadata=()=>resolve(Number.isFinite(a.duration)?Math.round(a.duration):0);a.onerror=()=>resolve(0);a.src=url});setMusicSwitches(v=>[...v,{id:id(),name:file.name,url,seconds,start:Math.min(total,6),anchor:'time',offset:0,volume:100,fade:1}])}
@@ -462,20 +526,21 @@ function startPreview(){
  const position=previewPosition>=total?0:previewPosition;
  const {phase:nextPhase,index:nextIndex,offset}=previewSceneAt(position);
  const video=previewVideo.current;
- if(video&&photos.some(photo=>photo.kind==='video')){
-  const clip=nextPhase==='photos'?photos[nextIndex]:undefined;
+ const card=nextPhase==='intro'?openingClip:nextPhase==='outro'?endingClip:null;
+ const clip=nextPhase==='photos'?photos[nextIndex]:card;
+ if(video&&(clip?.kind==='video'||openingClip?.kind==='video'||endingClip?.kind==='video'||photos.some(photo=>photo.kind==='video'))){
   const adjustedVideo=photos.find(photo=>photo.kind==='video'&&clipGainValue(photo.audioVolume)!==1);
   if(adjustedVideo)setPreviewClipVolume(adjustedVideo.audioVolume,true);
-  setPreviewClipVolume(clip?.audioVolume,true);
+  setPreviewClipVolume(nextPhase==='photos'?photos[nextIndex]?.audioVolume:undefined,true);
   video.src=clip?.kind==='video'?clip.url:new URL('../preview-silence.mp4',import.meta.url).href;
-  if(clip?.kind==='video'){try{video.currentTime=(clip.trimStart??0)+offset}catch{}}
+  if(clip?.kind==='video'){try{video.currentTime=(nextPhase==='photos'?photos[nextIndex]?.trimStart??0:0)+offset}catch{}}
   void video.play().catch(()=>{});
  }
  setPreviewPosition(position);
  setScrubbing(false);setPlayIndex(nextIndex);setPhase(nextPhase);setSceneOffset(offset);setPlaying(true);
  setSceneKey(key=>key+1);
  stopMusic();
- const pause=pauseBgmDuringVideo&&nextPhase==='photos'&&photos[nextIndex]?.kind==='video';
+ const pause=pauseBgmDuringVideo&&clip?.kind==='video';
  previewBgmPaused.current=pause;
  if(bgm!=='none'||orderedSwitches.length){
   try{void previewAudioContext().ctx.resume().catch(musicPlaybackError)}catch(error){musicPlaybackError(error)}
@@ -516,12 +581,14 @@ async function snapshotProject():Promise<StoredProject>{
   if(!response.ok)throw Error('素材を読み込めませんでした。');
   return response.blob();
  };
+ // The archive already supports named extra files, including when submissions are appended.
+ const cards=([openingMedia,endingMedia]).filter((media):media is CardMedia=>media!==null);
  const [items,audio,switchFiles]=await Promise.all([
   Promise.all(photos.map(async p=>({meta:{...p,url:undefined},blob:await getBlob(p.url)}))),
   audioFile?getBlob(audioFile.url).then(blob=>({name:audioFile.name,seconds:audioFile.seconds,blob})):undefined,
-  Promise.all(musicSwitches.map(async m=>({id:m.id,blob:await getBlob(m.url)}))),
+  Promise.all([...musicSwitches,...cards].map(async m=>({id:m.id,blob:await getBlob(m.url)}))),
  ]);
- return {version:1,savedAt:new Date().toISOString(),photos:items,audio,switchFiles,settings:{title,ending,endingStyle,sticker,curtainColor,opening,mode,musicSeconds,duration,aspect,bgm,volume,bgmStart,bgmOffset,musicSwitches:musicSwitches.map(({url,...m})=>m),pauseBgmDuringVideo}};
+ return {version:1,savedAt:new Date().toISOString(),photos:items,audio,switchFiles,settings:{cardMedia:cards.map(({url,...media})=>media),title,ending,endingStyle,sticker,curtainColor,opening,mode,musicSeconds,duration,aspect,bgm,volume,bgmStart,bgmOffset,musicSwitches:musicSwitches.map(({url,...m})=>m),pauseBgmDuringVideo}};
 }
 async function saveProject(){
  if(!photos.length||draftBusy)return;setDraftBusy(true);setDraftInfo('保存中…');
@@ -542,7 +609,17 @@ function applyStoredProject(draft:StoredProject,targetId:string|null){
   });
   photosRef.current.forEach(p=>URL.revokeObjectURL(p.url));setPhotos(next);setSelected(0);setUndoStack([]);setRedoStack([]);setPlaying(false);setPreviewPosition(0);setScrubbing(false);
   const v=draft.settings;
-  setTitle(v.title as string);setEnding(v.ending as string);setEndingStyle(v.endingStyle==='fuji_graduation'?'fuji_graduation':'message');setSticker(v.sticker as string);setCurtainColor((v.curtainColor as typeof curtainColor)||'red');setOpening((v.opening as typeof opening)||(v.theme==='theater'?'curtain':'fade'));setMode(v.mode as typeof mode);setMusicSeconds(v.musicSeconds as number);setDuration(v.duration as number);setAspect(v.aspect as typeof aspect);setBgm(v.bgm as typeof bgm);setVolume(v.volume as number);setBgmStart(Math.max(0,Number(v.bgmStart)||0));setBgmOffset(Math.max(0,Number(v.bgmOffset)||0));setPauseBgmDuringVideo(v.pauseBgmDuringVideo!==false);
+  setTitle(v.title as string);setEnding(v.ending as string);setEndingStyle(v.endingStyle==='fuji_graduation'||v.endingStyle==='none'||v.endingStyle==='upload'?v.endingStyle:'message');setSticker(v.sticker as string);setCurtainColor((v.curtainColor as typeof curtainColor)||'red');setOpening((v.opening as typeof opening)||(v.theme==='theater'?'curtain':'fade'));setMode(v.mode as typeof mode);setMusicSeconds(v.musicSeconds as number);setDuration(v.duration as number);setAspect(v.aspect as typeof aspect);setBgm(v.bgm as typeof bgm);setVolume(v.volume as number);setBgmStart(Math.max(0,Number(v.bgmStart)||0));setBgmOffset(Math.max(0,Number(v.bgmOffset)||0));setPauseBgmDuringVideo(v.pauseBgmDuringVideo!==false);
+  function restoreCard(side:CardSide):CardMedia|null{
+   const id=cardFileId(side);
+   const meta=Array.isArray(v.cardMedia)?v.cardMedia.find(item=>item?.id===id):null;
+   const file=draft.switchFiles?.find(item=>item.id===id);
+   if(!file||!meta||typeof meta.name!=='string'||!Number.isFinite(meta.duration)||meta.duration<=0||
+      (meta.kind!=='image'&&meta.kind!=='video'))return null;
+   return {id,name:meta.name,kind:meta.kind,duration:meta.duration,url:URL.createObjectURL(file.blob),effect:'none'};
+  }
+  openingRequest.current++;endingRequest.current++;
+  setOpeningMedia(restoreCard('opening'));setEndingMedia(restoreCard('ending'));setCardError('');
   setMusicSwitches((Array.isArray(v.musicSwitches)?v.musicSwitches:[]).map((m:MusicSwitch)=>{const item=draft.switchFiles?.find(x=>x.id===m.id);return {...m,url:item?URL.createObjectURL(item.blob):''}}).filter((m:MusicSwitch)=>m.url));
   if(draft.audio){setAudioFile({name:draft.audio.name,seconds:draft.audio.seconds,url:URL.createObjectURL(draft.audio.blob)})}else setAudioFile(null);
   setProjectId(targetId);setStep('edit');setImportNotice('');
@@ -630,13 +707,17 @@ async function eraseProject(targetId:string){
 async function copyProject(targetId:string){
  try{await duplicateProject(targetId,id());await refreshProjects();setDraftInfo('作品を複製しました')}catch{setDraftInfo('複製できませんでした')}
 }
-function newProject(){leaveSharedProject();setPlaying(false);setPreviewPosition(0);setScrubbing(false);stopMusic();setPhotos([]);setProjectId(null);setSelected(0);setUndoStack([]);setRedoStack([]);setAudioFile(null);setMusicSwitches([]);setTitle('');setOpening('fuji_graduation');setEndingStyle('message');setEnding('ありがとう、たくさんの思い出');setEditPage('opening');setStep('edit');setDraftInfo('')}
+function newProject(){openingRequest.current++;endingRequest.current++;setOpeningMedia(null);setEndingMedia(null);setCardError('');leaveSharedProject();setPlaying(false);setPreviewPosition(0);setScrubbing(false);stopMusic();setPhotos([]);setProjectId(null);setSelected(0);setUndoStack([]);setRedoStack([]);setAudioFile(null);setMusicSwitches([]);setTitle('');setOpening('fuji_graduation');setEndingStyle('message');setEnding('ありがとう、たくさんの思い出');setEditPage('opening');setStep('edit');setDraftInfo('')}
 
 async function makeMovie(){
  if(!photos.length||exporting)return;
+ if(opening==='upload'&&!openingMedia||endingStyle==='upload'&&!endingMedia){
+  setExportError('オープニングまたはエンディングの画像・動画を選ぶか、「なし」を選んでください。');
+  return;
+ }
  setPlaying(false);stopMusic();setExportError('');setExportProgress(0);setExporting(true);
  try{
-  const {blob,extension}=await exportMovie({photos:photos.map(p=>({...p,sticker:p.sticker??sticker})),durations:computed,title,ending,endingStyle,sticker,curtainColor,opening,aspect,bgm,audioUrl:audioFile?.url,volume,bgmStart,bgmOffset,musicSwitches:orderedSwitches.map(m=>({...m,start:switchAt(m)})),pauseBgmDuringVideo,onProgress:setExportProgress});
+  const {blob,extension}=await exportMovie({photos:photos.map(p=>({...p,sticker:p.sticker??sticker})),durations:computed,openingMedia:openingClip,endingMedia:endingClip,title,ending,endingStyle,sticker,curtainColor,opening,aspect,bgm,audioUrl:audioFile?.url,volume,bgmStart,bgmOffset,musicSwitches:orderedSwitches.map(m=>({...m,start:switchAt(m)})),pauseBgmDuringVideo,onProgress:setExportProgress});
   if(exportUrl.current)URL.revokeObjectURL(exportUrl.current);
   const url=URL.createObjectURL(blob);exportUrl.current=url;
   setExportResult({url,name:'omoide-theater.'+extension,blob});
@@ -661,8 +742,8 @@ function importMusic(files:FileList|null){
 useEffect(()=>{if(!playing)stopMusic()},[playing]);
 useEffect(()=>{
  if(!playing){previewBgmPaused.current=false;return;}
- syncPreviewBgm(pauseBgmDuringVideo&&phase==='photos'&&photos[playIndex]?.kind==='video');
-},[playing,phase,playIndex,pauseBgmDuringVideo,photos]);
+ syncPreviewBgm(pauseBgmDuringVideo&&playingVideo);
+},[playing,playingVideo,pauseBgmDuringVideo]);
 
 
 const submissionSite='https://kiku-sotsuen-movie.th-1043.chatgpt.site/';
@@ -694,14 +775,17 @@ return <main className={step==='home'?'theaterHome':'theaterEditor'}>
 {playing&&phase==='photos'&&transitionEffect==='page'&&photos.length>0&&((playIndex===0&&opening==='album')||photos[playIndex-1])?<div key={'turn-'+sceneKey} className="albumFullPageTurn" aria-hidden="true">{playIndex===0?<div className="albumTurnTitlePage"><span>{title}</span></div>:<div className="albumTurnPreviousPage"><div className="albumTurnPhotoClip">{photos[playIndex-1].kind==='video'?<div className="albumTurnVideoPlaceholder">🎞️</div>:<img src={photos[playIndex-1].url} alt="" style={{transform:'scale('+(photos[playIndex-1].zoom??1)+') translate('+(photos[playIndex-1].offsetX??0)+'%,'+(photos[playIndex-1].offsetY??0)+'%)'}}/>}</div>{photos[playIndex-1].caption?<div className="albumTurnCaption" style={{left:(photos[playIndex-1].captionX??50)+'%',top:(photos[playIndex-1].captionY??83)+'%',fontFamily:photos[playIndex-1].captionFont==='cursive'?'Yomogi, cursive':photos[playIndex-1].captionFont??'sans-serif',fontSize:(photos[playIndex-1].captionSize??22)+'px',fontWeight:photos[playIndex-1].captionWeight??700,color:photos[playIndex-1].captionColor??'#fff',background:photos[playIndex-1].captionBackground?'rgba(0,0,0,.58)':'transparent'}}>{photos[playIndex-1].caption}</div>:null}</div>}</div>:null}
 {showOpening&&opening==='album'?<div className="albumCustomTitle"><span>{title}</span></div>:null}
 {playing&&phase==='photos'&&playIndex>0&&transitionEffect!=='none'&&transitionEffect!=='page'&&photos[playIndex-1].kind!=='video'?<div key={'under-'+sceneKey} className="transitionUnderlay"><div className="underlayClip"><img src={photos[playIndex-1].url} alt="" style={{transform:'scale('+(photos[playIndex-1].zoom??1)+') translate('+(photos[playIndex-1].offsetX??0)+'%,'+(photos[playIndex-1].offsetY??0)+'%)'}}/></div></div>:null}
-<div onPointerDown={e=>{if(!scrubbing&&editTool==='position')beginDrag(e,'photo')}} onPointerMove={moveDrag} onPointerUp={endDrag} onPointerCancel={endDrag} className={'scenePhoto '+' '+(playing&&phase==='photos'?'animate '+(transitionEffect==='page'?'albumStill':transitionEffect):'')+(editTool==='position'?' draggablePhoto':'')} style={{'--scene-duration':activeDuration+'s'} as CSSProperties} data-video-hidden={titleCardStill||activePhoto?.kind!=='video'||(playing&&phase!=='photos')} >
-<video ref={previewVideo} playsInline onPointerDown={()=>setPreviewClipVolume(activePhoto?.audioVolume,true)} onPlay={()=>setPreviewClipVolume(activePhoto?.audioVolume,true)} controls={(!playing&&!scrubbing)||previewVideoBlocked} preload="auto" onTimeUpdate={e=>{
+<div onPointerDown={e=>{if(!scrubbing&&!visibleCard&&editTool==='position')beginDrag(e,'photo')}} onPointerMove={moveDrag} onPointerUp={endDrag} onPointerCancel={endDrag} className={'scenePhoto '+' '+(playing&&phase==='photos'?'animate '+(transitionEffect==='page'?'albumStill':transitionEffect):'')+(editTool==='position'?' draggablePhoto':'')} style={{'--scene-duration':activeDuration+'s'} as CSSProperties} data-video-hidden={previewMedia?.kind!=='video'} >
+<video ref={previewVideo} playsInline onPointerDown={()=>setPreviewClipVolume(visibleCard?undefined:activePhoto?.audioVolume,true)} onPlay={()=>setPreviewClipVolume(visibleCard?undefined:activePhoto?.audioVolume,true)} controls={(!playing&&!scrubbing)||previewVideoBlocked} preload="auto" onTimeUpdate={e=>{
  if(!playing&&trimming&&!e.currentTarget.paused&&e.currentTarget.currentTime>=trimEnd)e.currentTarget.pause();
-}} onPlaying={()=>{if(playing&&phase==='photos'&&activePhoto?.kind==='video'){setPreviewVideoScene(sceneKey);setPreviewVideoBlocked(false)}}} onError={()=>{if(playing&&phase==='photos'&&activePhoto?.kind==='video')setPreviewVideoBlocked(true)}} style={{transform:'scale('+(activePhoto?.zoom??1)+') translate('+(activePhoto?.offsetX??0)+'%,'+(activePhoto?.offsetY??0)+'%)'}}/>
+}} onPlaying={()=>{if(playing&&playingVideo){setPreviewVideoScene(sceneKey);setPreviewVideoBlocked(false)}}} onError={()=>{if(playing&&playingVideo)setPreviewVideoBlocked(true)}} style={{transform:'scale('+(visibleCard?1:activePhoto?.zoom??1)+') translate('+(visibleCard?0:activePhoto?.offsetX??0)+'%,'+(visibleCard?0:activePhoto?.offsetY??0)+'%)'}}/>
 </div>
-{titleCardStill?null:activePhoto?(activePhoto.kind==='video'?null:<div key={sceneKey+'-'+activePhoto.id} onPointerDown={e=>{if(!scrubbing&&editTool==='position')beginDrag(e,'photo')}} onPointerMove={moveDrag} onPointerUp={endDrag} onPointerCancel={endDrag} className={'scenePhoto '+' '+(playing&&phase==='photos'?'animate '+(transitionEffect==='page'?'albumStill':transitionEffect):'')+(editTool==='position'?' draggablePhoto':'')} style={{'--scene-duration':activeDuration+'s'} as CSSProperties}><img src={activePhoto.url} alt="選択中の写真" style={{transform:'scale('+(activePhoto.zoom??1)+') translate('+(activePhoto.offsetX??0)+'%,'+(activePhoto.offsetY??0)+'%)'}} /></div>):<span>上のボタンから写真や動画を追加できます</span>}
+{titleCardStill||visibleCard?null:activePhoto?(activePhoto.kind==='video'?null:<div key={sceneKey+'-'+activePhoto.id} onPointerDown={e=>{if(!scrubbing&&editTool==='position')beginDrag(e,'photo')}} onPointerMove={moveDrag} onPointerUp={endDrag} onPointerCancel={endDrag} className={'scenePhoto '+' '+(playing&&phase==='photos'?'animate '+(transitionEffect==='page'?'albumStill':transitionEffect):'')+(editTool==='position'?' draggablePhoto':'')} style={{'--scene-duration':activeDuration+'s'} as CSSProperties}><img src={activePhoto.url} alt="選択中の写真" style={{transform:'scale('+(activePhoto.zoom??1)+') translate('+(activePhoto.offsetX??0)+'%,'+(activePhoto.offsetY??0)+'%)'}} /></div>):<span>上のボタンから写真や動画を追加できます</span>}
+{visibleCard?.kind==='image'?<img className="openingTitleArtwork" src={visibleCard.url} alt={visibleCard.name}/>:null}
+{(showOpening&&(opening==='none'||opening==='upload'&&!openingMedia)||showEnding&&(endingStyle==='none'||endingStyle==='upload'&&!endingMedia))?
+ <span>{(showOpening?opening:endingStyle)==='none'?'なし':'画像または動画を選んでください'}</span>:null}
 {showOpening&&opening==='curtain'?<div key={'curtain-'+sceneKey} className={'curtainOverlay curtain-'+curtainColor}><div className="curtainPanel curtainLeft"/><div className="curtainPanel curtainRight"/><div className="curtainCaption">{title}</div></div>:null}
-{showEnding ? (
+{showEnding&&(endingStyle==='message'||endingStyle==='fuji_graduation') ? (
  endingStyle==='fuji_graduation'
   ? <img className="openingTitleArtwork" src={new URL('../fuji-graduation-ending.jpeg', import.meta.url).href} alt="たくさんの思い出をありがとう 令和9年 卒園式"/>
   : <div className={'endingScreen'+(endingStill?' endingStill':'')}><div>Fin.</div><small>{ending}</small></div>
@@ -710,7 +794,7 @@ return <main className={step==='home'?'theaterHome':'theaterEditor'}>
 {!titleCardStill&&activeSubtitle&&(!playing||phase==='photos')?<div className="timedSubtitle" style={{color:activePhoto.subtitleColor??'#ffffff',fontSize:(activePhoto.subtitleSize??22)+'px',WebkitTextStroke:'0.5px '+(activePhoto.subtitleOutline??'#202020'),textShadow:'-1px -1px 0 '+(activePhoto.subtitleOutline??'#202020')+', 1px 1px 0 '+(activePhoto.subtitleOutline??'#202020')}}>{activeSubtitle.text}</div>:null}
 {!titleCardStill&&activePhoto?.caption&&(!playing||phase==='photos')?<div key={activePhoto.id+'-'+sceneKey} className={'photoCaption '+(editTool==='text'?'draggableCaption':'')+(playing&&phase==='photos'?' captionMotion-'+(activePhoto.captionMotion??'none'):'')} style={{left:(activePhoto.captionX??50)+'%',top:(activePhoto.captionY??83)+'%',bottom:'auto',right:'auto',fontFamily:activePhoto.captionFont==='cursive'?'Yomogi, cursive':activePhoto.captionFont??'sans-serif',color:activePhoto.captionColor??'#ffffff',fontSize:(activePhoto.captionSize??22)+'px',fontWeight:activePhoto.captionWeight??700,textShadow:'none',background:activePhoto.captionBackground?'rgba(0,0,0,.58)':'transparent'}} onPointerDown={e=>{if(!scrubbing&&editTool==='text')beginDrag(e,'caption')}} onPointerMove={moveDrag} onPointerUp={endDrag} onPointerCancel={endDrag}>{activePhoto.captionOutline?<span aria-hidden="true" className="captionOutlineLayer" style={{WebkitTextStroke:((activePhoto.captionWeight??700)>=900?'3.2px ':(activePhoto.captionWeight??700)>=700?'2.2px ':'1.2px ')+(activePhoto.captionOutlineColor??'#222222')}}>{activePhoto.caption}</span>:null}<span className="captionFillLayer" style={{WebkitTextStroke:(activePhoto.captionWeight??700)>=900?'1.35px '+(activePhoto.captionColor??'#ffffff'):(activePhoto.captionWeight??700)>=700?'.65px '+(activePhoto.captionColor??'#ffffff'):'0px transparent',paintOrder:'stroke fill'}}>{activePhoto.caption}</span></div>:null}
 {showOpening && opening==='fuji_graduation' ? <img className="openingTitleArtwork" src={graduationArtwork} alt="令和9年 卒園式 思い出アルバム"/> : null}
-{showOpening&&opening!=='curtain'&&opening!=='album'&&opening!=='fuji_graduation'?<div key={'opening-'+sceneKey} className={'openingOverlay opening-'+opening}>{(['gold_light','floral_wedding','sakura_tunnel','balloon_party','starry_story','retro_cinema'].includes(opening))?<><div className="openingPhotoBackground" style={{backgroundImage:`url(${import.meta.env.BASE_URL}${opening}.png)`}}/><div className={"openingPhotoParticles"+(opening==='sakura_tunnel'?" sakuraPetalParticles":"")} aria-hidden="true">{Array.from({length:14},(_,i)=><span key={i} style={{left:(i*37%97)+'%',top:(i*23%91)+'%',animationDelay:-(i*.43)+'s'}}>{opening==='sakura_tunnel'?' ':opening==='balloon_party'?'🎈':opening==='floral_wedding'?'✿':opening==='retro_cinema'?'✦':opening==='starry_story'?'✧':'✦'}</span>)}</div></>:null}{opening==='countdown'?(!openingStill||!title.trim())&&<div className="countdownDial" aria-label="3、2、1とカウントダウン"><span className="countdownNumber countdownThree">3</span><span className="countdownNumber countdownTwo">2</span><span className="countdownNumber countdownOne">1</span><span className="countdownSweep"/></div>:<div className="openingOrnaments" aria-hidden="true">{opening==='sparkle'?'✦ ✧ ✨ ✦ ✧':opening==='sakura'?'🌸 🌸 🌸 🌸':opening==='rainbow'?'🌈 ☁️ ☁️':'✧'}</div>}<div className="openingHeading">{title}</div></div>:null}
+{showOpening&&opening!=='curtain'&&opening!=='album'&&opening!=='fuji_graduation'&&opening!=='none'&&opening!=='upload'?<div key={'opening-'+sceneKey} className={'openingOverlay opening-'+opening}>{(['gold_light','floral_wedding','sakura_tunnel','balloon_party','starry_story','retro_cinema'].includes(opening))?<><div className="openingPhotoBackground" style={{backgroundImage:`url(${import.meta.env.BASE_URL}${opening}.png)`}}/><div className={"openingPhotoParticles"+(opening==='sakura_tunnel'?" sakuraPetalParticles":"")} aria-hidden="true">{Array.from({length:14},(_,i)=><span key={i} style={{left:(i*37%97)+'%',top:(i*23%91)+'%',animationDelay:-(i*.43)+'s'}}>{opening==='sakura_tunnel'?' ':opening==='balloon_party'?'🎈':opening==='floral_wedding'?'✿':opening==='retro_cinema'?'✦':opening==='starry_story'?'✧':'✦'}</span>)}</div></>:null}{opening==='countdown'?(!openingStill||!title.trim())&&<div className="countdownDial" aria-label="3、2、1とカウントダウン"><span className="countdownNumber countdownThree">3</span><span className="countdownNumber countdownTwo">2</span><span className="countdownNumber countdownOne">1</span><span className="countdownSweep"/></div>:<div className="openingOrnaments" aria-hidden="true">{opening==='sparkle'?'✦ ✧ ✨ ✦ ✧':opening==='sakura'?'🌸 🌸 🌸 🌸':opening==='rainbow'?'🌈 ☁️ ☁️':'✧'}</div>}<div className="openingHeading">{title}</div></div>:null}
 </div></div>
 {photos.length>0?<div className="previewTimeline">
  <label>再生位置 <span>{positionLabel(Math.min(previewPosition,total))} / {positionLabel(total)}</span>
@@ -769,15 +853,17 @@ return <main className={step==='home'?'theaterHome':'theaterEditor'}>
 {shareConflict?<p className="note">手元の編集を残すには「途中保存」を押してから、共有先の最新版を開いてください。</p>:null}
 {draftInfo?<p className="note" role="status">{draftInfo}</p>:null}
 </section>{editPage==='main'?<><p className="note">カーテン・写真のフェード／ズーム／スライドを画面で確認できます。BGMは試聴用です。動画の書き出しは下の試験機能で確認できます。</p><div className="editPageActions"><button onClick={()=>setEditPage('opening')}>← オープニング</button><button className="primary" onClick={()=>setEditPage('ending')}>次へ：エンディング →</button></div></>:null}{editPage==='opening'?<><section className="designBox"><h3>🎬 オープニング作成</h3>
-<label>オープニング演出<select value={opening} onChange={e=>setOpening(e.target.value as typeof opening)}>
-  {opening!=='fuji_graduation'&&opening!=='curtain'&&opening!=='album'?<option value={opening} disabled>保存済みの演出</option>:null}
+<label>オープニング演出<select value={opening} onChange={e=>{setPlaying(false);setScrubbing(false);setPreviewPosition(0);setCardError('');setOpening(e.target.value as typeof opening)}}>
+  {opening!=='fuji_graduation'&&opening!=='curtain'&&opening!=='album'&&opening!=='none'&&opening!=='upload'?<option value={opening} disabled>保存済みの演出</option>:null}
   <option value="fuji_graduation">🌸 令和9年 卒園式（ふじほいくえん）</option>
   <option value="curtain">🎭 カーテン</option>
   <option value="album">📖 アルバムが開く</option>
+  <option value="none">なし</option>
+  <option value="upload">画像・動画をアップロード</option>
 </select></label>
 {opening==='curtain'?<label>カーテンの色<select value={curtainColor} onChange={e=>setCurtainColor(e.target.value as typeof curtainColor)}><option value="red">クラシック（赤）</option><option value="pink">パステル（ピンク）</option><option value="navy">ナイト（紺）</option><option value="gold">ゴールド</option></select></label>:null}
 {opening==='album'?<p className="note">📖 本編の切り替えは素材ごとに選択できます。</p>:null}
-{opening==='fuji_graduation'?<p className="note">画像に入っているタイトルを表示します。</p>:<label>オープニングタイトル<input value={title} onChange={e=>setTitle(e.target.value)}/></label>}<label>動画の向き<select value={aspect} onChange={e=>setAspect(e.target.value as typeof aspect)}><option value="wide">横型（16:9）</option><option value="vertical">縦型（9:16）</option><option value="square">正方形（1:1）</option></select></label><p className="note">オープニング演出とタイトルを選びます。タイトルは本編中には表示しません。</p></section>
+{opening==='upload'?cardPicker('opening',openingMedia):opening==='none'?null:opening==='fuji_graduation'?<p className="note">画像に入っているタイトルを表示します。</p>:<label>オープニングタイトル<input value={title} onChange={e=>setTitle(e.target.value)}/></label>}<label>動画の向き<select value={aspect} onChange={e=>setAspect(e.target.value as typeof aspect)}><option value="wide">横型（16:9）</option><option value="vertical">縦型（9:16）</option><option value="square">正方形（1:1）</option></select></label><p className="note">オープニング演出とタイトルを選びます。タイトルは本編中には表示しません。</p></section>
 <section className="musicBox"><h3>🎵 BGMを選ぶ</h3>
 <label>音楽の種類<select value={bgm} onChange={e=>{stopMusic();setBgm(e.target.value as typeof bgm)}}>
 <option value="gentle">やさしい音色（試作用オリジナル音）</option>
@@ -796,13 +882,16 @@ return <main className={step==='home'?'theaterHome':'theaterEditor'}>
 </section>
 <div className="editPageActions"><button className="primary" onClick={()=>setEditPage('main')}>次へ：本編 →</button></div></>:null}{editPage==='ending'?<><section className="designBox"><h3>🌷 エンディング作成</h3>
 <label>エンディングの種類
- <select value={endingStyle} onChange={e=>setEndingStyle(e.target.value==='fuji_graduation'?'fuji_graduation':'message')}>
+ <select value={endingStyle} onChange={e=>{setPlaying(false);setScrubbing(false);setPreviewPosition(0);setCardError('');setEndingStyle(e.target.value as typeof endingStyle)}}>
+  <option value="none">なし</option>
+  <option value="upload">画像・動画をアップロード</option>
   <option value="message">メッセージ</option>
   <option value="fuji_graduation">🌸 卒園式・たくさんの思い出をありがとう</option>
  </select>
 </label>
+{endingStyle==='upload'?cardPicker('ending',endingMedia):null}
 {endingStyle==='message' ? <label>最後に表示するメッセージ<textarea rows={2} maxLength={70} value={ending} onChange={e=>setEnding(e.target.value)} placeholder="ありがとう、たくさんの思い出"/></label> : null}
-</section><div className="editPageActions"><button onClick={()=>setEditPage('main')}>← 本編</button><button className="primary" onClick={()=>setEditPage('finish')}>次へ：完成・保存 →</button></div></>:null}{editPage==='finish'?<><h3>ムービーの長さ</h3><div className="mode"><label><input type="radio" checked={mode==='photo'} onChange={()=>setMode('photo')}/> 写真の表示時間を基準</label><label><input type="radio" checked={mode==='music'} onChange={()=>setMode('music')}/> 音楽の長さを基準</label></div>{mode==='photo'?<label>新しく追加する写真の初期表示時間：{duration}秒<input type="range" min="2" max="15" value={duration} onChange={e=>setDuration(Number(e.target.value))}/><button className="small" onClick={()=>setPhotos(p=>p.map(x=>({...x,duration})))}>全写真に適用</button></label>:<label>音楽の使用時間（秒）<input type="number" min="15" max="3600" value={musicSeconds} onChange={e=>setMusicSeconds(Math.max(15,Number(e.target.value)||15))}/></label>}<div className="summary">完成予定時間：約 {Math.floor(total/60)}分{Math.round(total%60)}秒（前後の演出各6秒を含む）</div><label>タイトル<input value={title} onChange={e=>setTitle(e.target.value)}/></label><section className="exportBox"><h3>🎬 動画を書き出す（試験機能）</h3>
+</section><div className="editPageActions"><button onClick={()=>setEditPage('main')}>← 本編</button><button className="primary" onClick={()=>setEditPage('finish')}>次へ：完成・保存 →</button></div></>:null}{editPage==='finish'?<><h3>ムービーの長さ</h3><div className="mode"><label><input type="radio" checked={mode==='photo'} onChange={()=>setMode('photo')}/> 写真の表示時間を基準</label><label><input type="radio" checked={mode==='music'} onChange={()=>setMode('music')}/> 音楽の長さを基準</label></div>{mode==='photo'?<label>新しく追加する写真の初期表示時間：{duration}秒<input type="range" min="2" max="15" value={duration} onChange={e=>setDuration(Number(e.target.value))}/><button className="small" onClick={()=>setPhotos(p=>p.map(x=>({...x,duration})))}>全写真に適用</button></label>:<label>音楽の使用時間（秒）<input type="number" min="15" max="3600" value={musicSeconds} onChange={e=>setMusicSeconds(Math.max(15,Number(e.target.value)||15))}/></label>}<div className="summary">完成予定時間：約 {Math.floor(total/60)}分{Math.round(total%60)}秒（オープニング・エンディングを含む）</div><label>タイトル<input value={title} onChange={e=>setTitle(e.target.value)}/></label><section className="exportBox"><h3>🎬 動画を書き出す（試験機能）</h3>
 <p className="note">動画の元音声を残すか選べます。BGMと同時に流れる場合は音量にご注意ください。作成には動画の長さと同じ程度の時間がかかります。</p>
 <button className="primary" disabled={exporting||!photos.length} onClick={makeMovie}>{exporting?'動画を作成中… '+exportProgress+'%':'動画を作成する'}</button>
 {exporting?<progress max="100" value={exportProgress} style={{width:'100%'}}/>:null}
