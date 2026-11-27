@@ -394,3 +394,18 @@ input[type="file"][hidden]{display:none!important}
 .illustratedEditSteps [data-step="finish"] {--art-left:-557.76%}
 .theaterEditor .illustratedEditSteps button.active {outline:2px solid #96517e;outline-offset:1px}
 .theaterEditor .illustratedEditSteps button:focus-visible {outline:3px solid #1374a2;outline-offset:2px}
+
+.theaterEditor .illustratedEditSteps {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 5px;
+  margin: 12px 0 16px;
+}
+.theaterEditor .illustratedEditSteps button,
+.theaterEditor .illustratedEditSteps button.active {
+  border-radius: 9px;
+}
+.illustratedEditSteps button img {
+  top: 50%;
+  transform: translateY(-35.9375%);
+  clip-path: inset(28.90625% 0 57.03125%);
+}
