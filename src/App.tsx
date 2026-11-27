@@ -142,6 +142,7 @@ const switchTimers=useRef<number[]>([]);
 const switchAudio=useRef<HTMLAudioElement|null>(null);
 const bgmDelay=useRef<number|null>(null);
 const [pauseBgmDuringVideo,setPauseBgmDuringVideo]=useState(true);
+const previewBgmPaused=useRef(false);
 const [previewVideoScene,setPreviewVideoScene]=useState<number|null>(null);
 const [previewVideoBlocked,setPreviewVideoBlocked]=useState(false);
 const [musicError,setMusicError]=useState('');
@@ -288,6 +289,19 @@ function playMusic(){
   };note();synthTimer.current=window.setInterval(note,bgm==='gentle'?1300:850);setMusicPlaying(true);
  }catch{setMusicError('この端末ではBGMを再生できません')}
 }
+function syncPreviewBgm(pause:boolean){
+ previewBgmPaused.current=pause;
+ const currentMusic=switchAudio.current??audioRef.current;
+ if(audioRef.current&&switchAudio.current)audioRef.current.pause();
+ if(currentMusic){
+  if(pause)currentMusic.pause();
+  else if(currentMusic.paused)void currentMusic.play().catch(()=>{});
+ }
+ if(soundCtx.current){
+  if(pause||switchAudio.current)void soundCtx.current.suspend();
+  else void soundCtx.current.resume();
+ }
+}
 useEffect(()=>{
  const video=previewVideo.current;
  setPreviewVideoBlocked(false);
@@ -304,6 +318,8 @@ useEffect(()=>{
  if(video.src!==clip.url)video.src=clip.url;
  let active=true;
  const begin=()=>{
+  video.defaultMuted=false;
+  video.muted=false;
   const start=clip.trimStart??0;
   try{if(Math.abs(video.currentTime-start)>.15)video.currentTime=start}catch{}
   void video.play().catch(()=>{if(active)setPreviewVideoBlocked(true)});
@@ -326,8 +342,8 @@ function startPreview(){
    // Start the same player from the tap before switching it to the user's clips.
    void video.play().catch(()=>{});
   }
-  setPlayIndex(0);setPhase('intro');setPlaying(true);stopMusic();if(bgmStart<=0)playMusic();else{bgmDelay.current=window.setTimeout(()=>{bgmDelay.current=null;playMusic()},bgmStart*1000)}
- for(const m of orderedSwitches){const at=Math.max(0,switchAt(m));const timer=window.setTimeout(()=>{if(switchAudio.current)switchAudio.current.pause();if(audioRef.current)audioRef.current.pause();if(soundCtx.current)void soundCtx.current.suspend();const a=new Audio(m.url);switchAudio.current=a;a.volume=Math.min(1,m.volume/100);a.loop=true;const seek=()=>{try{a.currentTime=Math.min(m.offset,Math.max(0,(a.duration||m.seconds)-.1))}catch{}};a.addEventListener('loadedmetadata',seek,{once:true});seek();void a.play().catch(()=>setMusicError('切り替えBGMを再生できませんでした'))},at*1000);switchTimers.current.push(timer)} }
+  setPlayIndex(0);setPhase('intro');setPlaying(true);stopMusic();if(bgmStart<=0)playMusic();else{bgmDelay.current=window.setTimeout(()=>{bgmDelay.current=null;playMusic();syncPreviewBgm(previewBgmPaused.current)},bgmStart*1000)}
+ for(const m of orderedSwitches){const at=Math.max(0,switchAt(m));const timer=window.setTimeout(()=>{if(switchAudio.current)switchAudio.current.pause();if(audioRef.current)audioRef.current.pause();if(soundCtx.current)void soundCtx.current.suspend();const a=new Audio(m.url);switchAudio.current=a;a.volume=Math.min(1,m.volume/100);a.loop=true;const seek=()=>{try{a.currentTime=Math.min(m.offset,Math.max(0,(a.duration||m.seconds)-.1))}catch{}};a.addEventListener('loadedmetadata',seek,{once:true});seek();if(!previewBgmPaused.current)void a.play().catch(()=>setMusicError('切り替えBGMを再生できませんでした'))},at*1000);switchTimers.current.push(timer)} }
  setSceneKey(k=>k+1)
 }
 async function snapshotProject():Promise<StoredProject>{
@@ -479,7 +495,10 @@ function importMusic(files:FileList|null){
  probe.onerror=()=>{URL.revokeObjectURL(url);setMusicError('音楽ファイルを読み取れませんでした')};
 }
 useEffect(()=>{if(!playing)stopMusic()},[playing]);
-useEffect(()=>{if(!playing)return;const isVideo=phase==='photos'&&photos[playIndex]?.kind==='video';const pause=pauseBgmDuringVideo&&isVideo;if(audioRef.current){if(pause)audioRef.current.pause();else void audioRef.current.play().catch(()=>{})}if(soundCtx.current){if(pause)void soundCtx.current.suspend();else void soundCtx.current.resume()}},[playing,phase,playIndex,pauseBgmDuringVideo,photos]);
+useEffect(()=>{
+ if(!playing){previewBgmPaused.current=false;return;}
+ syncPreviewBgm(pauseBgmDuringVideo&&phase==='photos'&&photos[playIndex]?.kind==='video');
+},[playing,phase,playIndex,pauseBgmDuringVideo,photos]);
 
 
 const graduationArtwork = new URL('../fuji-graduation-opening.webp', import.meta.url).href;
