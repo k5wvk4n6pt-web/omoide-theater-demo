@@ -337,20 +337,19 @@ input[type="file"][hidden]{display:none!important}
   width: 100%;
   height: auto;
 }
-.graduationPoster .graduationPosterAction {
-  position: absolute;
-  inset: 69.1% 10% auto;
-  height: 9.6%;
-  min-height: 44px;
-  padding: 0;
-  border: 0;
+.graduationHome .graduationPosterAction {
+  display: block;
+  width: 100%;
+  min-height: 48px;
+  margin: 16px 0 0;
+  border: 2px solid #f6bdc6;
   border-radius: 100px;
-  background: transparent;
+  background: linear-gradient(#c23662, #a91449);
+  color: #fff;
+  font-weight: 800;
   touch-action: manipulation;
 }
-.graduationPoster .graduationPosterAction:active { background: #50001c24; }
-.graduationPoster .graduationPosterAction:disabled { background: #fff8; }
-.graduationPoster .graduationPosterAction:focus-visible { outline-offset: -4px; }
+.graduationHome .graduationPosterAction:disabled { opacity: .6; }
 .graduationHome .draftBox {
   border: 1px solid #edc9ac;
   background: #fff8ef;
