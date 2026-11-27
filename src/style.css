@@ -215,7 +215,18 @@ input[type="file"][hidden]{display:none!important}
 }
 .graduationEditorHeader img,
 .graduationEditorFooter img {width:100%;left:0}
-.graduationEditorHeader img {top:0;transform:scaleY(1.141);transform-origin:top center}
+.graduationEditorHeader img {top:0}
+.graduationEditorHeader::after {
+  position:absolute;
+  inset:87% 0 0;
+  content:"";
+  background:linear-gradient(to bottom, transparent, #a9ce27 70%);
+  pointer-events:none;
+}
+.graduationEditorHeader img {clip-path:inset(0 0 87.955729% 0)}
+.theaterEditor > .graduationEditorHeader {
+  background:linear-gradient(to bottom, #bce9ff 79%, #a9ce27 88%);
+}
 .graduationEditorFooter img {bottom:0}
 .theaterEditor > .panel {
   position:relative;
