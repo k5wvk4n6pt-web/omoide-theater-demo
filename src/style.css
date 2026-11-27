@@ -380,3 +380,7 @@ input[type="file"][hidden]{display:none!important}
 .graduationHome .projectDetail small { color: #69515a; }
 .graduationHome .projectButtons button { min-height: 44px; margin-right: 0; }
 .graduationHome button:focus-visible { outline: 3px solid #1374a2; outline-offset: 3px; }
+
+.previewHeading{display:flex;align-items:center;justify-content:space-between;gap:.5rem;flex-wrap:wrap;margin-block:1rem .5rem}
+.previewHeading h3{margin:0}
+.previewHeading button{margin:0 0 0 auto;min-height:44px}

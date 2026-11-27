@@ -142,7 +142,8 @@ const switchTimers=useRef<number[]>([]);
 const switchAudio=useRef<HTMLAudioElement|null>(null);
 const bgmDelay=useRef<number|null>(null);
 const [pauseBgmDuringVideo,setPauseBgmDuringVideo]=useState(true);
-const [previewSound,setPreviewSound]=useState(false);
+const [previewVideoScene,setPreviewVideoScene]=useState<number|null>(null);
+const [previewVideoBlocked,setPreviewVideoBlocked]=useState(false);
 const [musicError,setMusicError]=useState('');
 const [musicPlaying,setMusicPlaying]=useState(false);
 const [exporting,setExporting]=useState(false);
@@ -165,6 +166,7 @@ const switchAt=(m:MusicSwitch)=>m.anchor==='photo'&&m.photoId?intro+computed.sli
 const orderedSwitches=[...musicSwitches].sort((a,b)=>switchAt(a)-switchAt(b));
 useEffect(()=>{
 if(!playing||photos.length===0)return;
+if(phase==='photos'&&photos[playIndex]?.kind==='video'&&previewVideoScene!==sceneKey)return;
 const seconds=phase==='intro'?intro:phase==='outro'?outro:computed[playIndex];
 const timer=window.setTimeout(()=>{
  if(phase==='intro'){setPhase('photos');setPlayIndex(0)}
@@ -174,7 +176,7 @@ const timer=window.setTimeout(()=>{
  setSceneKey(k=>k+1);
 },seconds*1000);
 return()=>window.clearTimeout(timer);
-},[playing,phase,playIndex,photos.length,computed]);
+},[playing,phase,playIndex,photos,computed,previewVideoScene,sceneKey]);
 function readVideoDuration(url:string){
  return new Promise<number>(resolve=>{
   const video=document.createElement('video');
@@ -286,9 +288,24 @@ function playMusic(){
   };note();synthTimer.current=window.setInterval(note,bgm==='gentle'?1300:850);setMusicPlaying(true);
  }catch{setMusicError('この端末ではBGMを再生できません')}
 }
-useEffect(()=>{const el=previewVideo.current;if(!el)return;if(playing&&phase==='photos'){const clip=photos[playIndex];if(clip?.kind!=='video')return;el.muted=!previewSound||clip.keepAudio===false;el.defaultMuted=!previewSound||clip.keepAudio===false;el.playsInline=true;const begin=()=>{const start=clip.trimStart??0;try{if(Math.abs(el.currentTime-start)>.15)el.currentTime=start}catch{}void el.play().catch(()=>{el.muted=true;el.defaultMuted=true;setPreviewSound(false);void el.play().catch(()=>setMusicError('動画を再生できません。動画をタップして再生をお試しください'))})};if(el.readyState>=1)begin();else{el.addEventListener('loadedmetadata',begin,{once:true});el.load()}return()=>{el.removeEventListener('loadedmetadata',begin);el.pause()}}else{el.pause()}},[playing,phase,playIndex,sceneKey,previewSound]);
+useEffect(()=>{
+ const video=previewVideo.current;
+ setPreviewVideoBlocked(false);
+ if(!video||!playing||phase!=='photos')return;
+ const clip=photos[playIndex];
+ if(clip?.kind!=='video')return;
+ let active=true;
+ const begin=()=>{
+  const start=clip.trimStart??0;
+  try{if(Math.abs(video.currentTime-start)>.15)video.currentTime=start}catch{}
+  void video.play().catch(()=>{if(active)setPreviewVideoBlocked(true)});
+ };
+ if(video.readyState>=1)begin();
+ else video.addEventListener('loadedmetadata',begin,{once:true});
+ return()=>{active=false;video.removeEventListener('loadedmetadata',begin);video.pause()};
+},[playing,phase,playIndex,sceneKey]);
 useEffect(()=>{setSubtitleTime(0)},[playIndex,selected,sceneKey]);
-useEffect(()=>{if(!playing||phase!=='photos')return;const start=performance.now();const timer=window.setInterval(()=>setSubtitleTime(Math.min(computed[playIndex]??5,(performance.now()-start)/1000)),100);return()=>clearInterval(timer)},[playing,phase,playIndex,sceneKey]);
+useEffect(()=>{if(!playing||phase!=='photos'||(photos[playIndex]?.kind==='video'&&previewVideoScene!==sceneKey))return;const start=performance.now();const timer=window.setInterval(()=>setSubtitleTime(Math.min(computed[playIndex]??5,(performance.now()-start)/1000)),100);return()=>clearInterval(timer)},[playing,phase,playIndex,sceneKey,previewVideoScene]);
 async function addMusicSwitch(files:FileList|null){const file=files?.[0];if(!file)return;const url=URL.createObjectURL(file);const seconds=await new Promise<number>(resolve=>{const a=new Audio();a.preload='metadata';a.onloadedmetadata=()=>resolve(Number.isFinite(a.duration)?Math.round(a.duration):0);a.onerror=()=>resolve(0);a.src=url});setMusicSwitches(v=>[...v,{id:id(),name:file.name,url,seconds,start:Math.min(total,6),anchor:'time',offset:0,volume:volume,fade:1}])}
 function startPreview(){
  if(!photos.length)return;
@@ -472,11 +489,11 @@ return <main className={step==='home'?'theaterHome':'theaterEditor'}>
  <input type="file" accept="video/*,.mov,.mp4,.m4v,.webm" multiple disabled={importing||draftBusy} onChange={importSelectedMedia}/>
 </label>
 </div>:null}<p className="note" role="status" hidden={!importNotice}>{importNotice}</p>
-<section className="sharedPreview"><h3>{openingStill?'🎬 オープニングプレビュー':endingStill?'🌷 エンディングプレビュー':'🎥 全体プレビュー'}</h3><div className={'preview '+aspect}><div className={'previewFrame'+(openingStill?' openingStill':'')}>
+<section className="sharedPreview"><div className="previewHeading"><h3>{openingStill?'🎬 オープニングプレビュー':endingStill?'🌷 エンディングプレビュー':'🎥 全体プレビュー'}</h3>{photos.length>0?<button type="button" onClick={startPreview}>{playing?'■ 停止':'▶ 最初から再生'}</button>:null}</div><div className={'preview '+aspect}><div className={'previewFrame'+(openingStill?' openingStill':'')}>
 {playing&&phase==='photos'&&transitionEffect==='page'&&photos.length>0&&((playIndex===0&&opening==='album')||photos[playIndex-1])?<div key={'turn-'+sceneKey} className="albumFullPageTurn" aria-hidden="true">{playIndex===0?<div className="albumTurnTitlePage"><span>{title}</span></div>:<div className="albumTurnPreviousPage"><div className="albumTurnPhotoClip">{photos[playIndex-1].kind==='video'?<div className="albumTurnVideoPlaceholder">🎞️</div>:<img src={photos[playIndex-1].url} alt="" style={{transform:'scale('+(photos[playIndex-1].zoom??1)+') translate('+(photos[playIndex-1].offsetX??0)+'%,'+(photos[playIndex-1].offsetY??0)+'%)'}}/>}</div>{photos[playIndex-1].caption?<div className="albumTurnCaption" style={{left:(photos[playIndex-1].captionX??50)+'%',top:(photos[playIndex-1].captionY??83)+'%',fontFamily:photos[playIndex-1].captionFont==='cursive'?'Yomogi, cursive':photos[playIndex-1].captionFont??'sans-serif',fontSize:(photos[playIndex-1].captionSize??22)+'px',fontWeight:photos[playIndex-1].captionWeight??700,color:photos[playIndex-1].captionColor??'#fff',background:photos[playIndex-1].captionBackground?'rgba(0,0,0,.58)':'transparent'}}>{photos[playIndex-1].caption}</div>:null}</div>}</div>:null}
 {showOpening&&opening==='album'?<div className="albumCustomTitle"><span>{title}</span></div>:null}
 {playing&&phase==='photos'&&playIndex>0&&transitionEffect!=='none'&&transitionEffect!=='page'&&photos[playIndex-1].kind!=='video'?<div key={'under-'+sceneKey} className="transitionUnderlay"><div className="underlayClip"><img src={photos[playIndex-1].url} alt="" style={{transform:'scale('+(photos[playIndex-1].zoom??1)+') translate('+(photos[playIndex-1].offsetX??0)+'%,'+(photos[playIndex-1].offsetY??0)+'%)'}}/></div></div>:null}
-{titleCardStill?null:activePhoto?<div key={sceneKey+'-'+(activePhoto?.id||'')} onPointerDown={e=>{if(editTool==='position')beginDrag(e,'photo')}} onPointerMove={moveDrag} onPointerUp={endDrag} onPointerCancel={endDrag} className={'scenePhoto '+' '+(playing&&phase==='photos'?'animate '+(transitionEffect==='page'?'albumStill':transitionEffect):'')+(editTool==='position'?' draggablePhoto':'')} style={{'--scene-duration':activeDuration+'s'} as CSSProperties}>{activePhoto.kind==='video'?<video ref={previewVideo} src={activePhoto.url} playsInline muted={!previewSound||!(activePhoto.keepAudio??true)} controls={!playing} preload="auto" onLoadedData={e=>{if(playing&&phase==='photos')void e.currentTarget.play().catch(()=>{})}} style={{transform:'scale('+(activePhoto.zoom??1)+') translate('+(activePhoto.offsetX??0)+'%,'+(activePhoto.offsetY??0)+'%)'}}/>:<img src={activePhoto.url} alt="選択中の写真" style={{transform:'scale('+(activePhoto.zoom??1)+') translate('+(activePhoto.offsetX??0)+'%,'+(activePhoto.offsetY??0)+'%)'}} />}</div>:<span>下のボタンから写真や動画を追加できます</span>}
+{titleCardStill?null:activePhoto?<div key={sceneKey+'-'+(activePhoto?.id||'')} onPointerDown={e=>{if(editTool==='position')beginDrag(e,'photo')}} onPointerMove={moveDrag} onPointerUp={endDrag} onPointerCancel={endDrag} className={'scenePhoto '+' '+(playing&&phase==='photos'?'animate '+(transitionEffect==='page'?'albumStill':transitionEffect):'')+(editTool==='position'?' draggablePhoto':'')} style={{'--scene-duration':activeDuration+'s'} as CSSProperties}>{activePhoto.kind==='video'?<video ref={previewVideo} src={activePhoto.url} playsInline controls={!playing||previewVideoBlocked} preload="auto" onPlaying={()=>{if(playing&&phase==='photos'){setPreviewVideoScene(sceneKey);setPreviewVideoBlocked(false)}}} onError={()=>{if(playing&&phase==='photos')setPreviewVideoBlocked(true)}} style={{transform:'scale('+(activePhoto.zoom??1)+') translate('+(activePhoto.offsetX??0)+'%,'+(activePhoto.offsetY??0)+'%)'}}/>:<img src={activePhoto.url} alt="選択中の写真" style={{transform:'scale('+(activePhoto.zoom??1)+') translate('+(activePhoto.offsetX??0)+'%,'+(activePhoto.offsetY??0)+'%)'}} />}</div>:<span>上のボタンから写真や動画を追加できます</span>}
 {showOpening&&opening==='curtain'?<div key={'curtain-'+sceneKey} className={'curtainOverlay curtain-'+curtainColor}><div className="curtainPanel curtainLeft"/><div className="curtainPanel curtainRight"/><div className="curtainCaption">{title}</div></div>:null}
 {showEnding ? (
  endingStyle==='fuji_graduation'
@@ -489,6 +506,7 @@ return <main className={step==='home'?'theaterHome':'theaterEditor'}>
 {showOpening && opening==='fuji_graduation' ? <img className="openingTitleArtwork" src={graduationArtwork} alt="令和9年 卒園式 思い出アルバム"/> : null}
 {showOpening&&opening!=='curtain'&&opening!=='album'&&opening!=='fuji_graduation'?<div key={'opening-'+sceneKey} className={'openingOverlay opening-'+opening}>{(['gold_light','floral_wedding','sakura_tunnel','balloon_party','starry_story','retro_cinema'].includes(opening))?<><div className="openingPhotoBackground" style={{backgroundImage:`url(${import.meta.env.BASE_URL}${opening}.png)`}}/><div className={"openingPhotoParticles"+(opening==='sakura_tunnel'?" sakuraPetalParticles":"")} aria-hidden="true">{Array.from({length:14},(_,i)=><span key={i} style={{left:(i*37%97)+'%',top:(i*23%91)+'%',animationDelay:-(i*.43)+'s'}}>{opening==='sakura_tunnel'?' ':opening==='balloon_party'?'🎈':opening==='floral_wedding'?'✿':opening==='retro_cinema'?'✦':opening==='starry_story'?'✧':'✦'}</span>)}</div></>:null}{opening==='countdown'?(!openingStill||!title.trim())&&<div className="countdownDial" aria-label="3、2、1とカウントダウン"><span className="countdownNumber countdownThree">3</span><span className="countdownNumber countdownTwo">2</span><span className="countdownNumber countdownOne">1</span><span className="countdownSweep"/></div>:<div className="openingOrnaments" aria-hidden="true">{opening==='sparkle'?'✦ ✧ ✨ ✦ ✧':opening==='sakura'?'🌸 🌸 🌸 🌸':opening==='rainbow'?'🌈 ☁️ ☁️':'✧'}</div>}<div className="openingHeading">{title}</div></div>:null}
 </div></div>
+{playing&&previewVideoBlocked?<p className="note" role="status">動画の再生ボタンを押すと、音声付きでプレビューを続けられます。</p>:null}
 {editPage==='main'?<><h3>写真の並び順</h3><div className="strip">{photos.map((p,i)=><button key={p.id} className={'thumb '+(selected===i?'selected':'')} onClick={()=>{setSelected(i);setPlaying(false);setPhase('intro');setSceneKey(k=>k+1)}}>{p.kind==='video'?<VideoThumbnail url={p.url} name={p.name}/>:<img src={p.url} alt={p.name}/>}<span>{i+1}</span></button>)}</div>{current&&<div className="editor"><h3>選択中の{current.kind==='video'?'動画':'写真'}：{selected+1}番目</h3><div className="photoToolGrid">{([['text','T','文字'],['subtitles','▤','字幕'],['sticker','☺','スタンプ'],['transition','⇄','切り替え'],['duration','◷','表示時間'],['position','⛶','拡大・移動'],['apply','▢','一括適用']] as const).map(([key,icon,label])=><button key={key} className={editTool===key?'chosen':''} onClick={()=>{if(key==='transition')setTransitionChoice(current.effect);setEditTool(editTool===key?null:key)}}><span>{icon}</span><small>{label}</small></button>)}</div>
 {editTool?<div className="photoToolPanel">
 {editTool==='subtitles'?<div className="subtitleEditor"><h4>字幕（この写真・動画）</h4><label>表示を確認する位置：{subtitleTime.toFixed(1)}秒<input type="range" min="0" max={Math.max(1,current.duration)} step="0.1" value={Math.min(subtitleTime,current.duration)} onChange={e=>setSubtitleTime(Number(e.target.value))}/></label>{(current.subtitles??[]).map(c=><div className="subtitleCue" key={c.id}><label>字幕<input value={c.text} placeholder="字幕を入力" onChange={e=>update(selected,{subtitles:(current.subtitles??[]).map(x=>x.id===c.id?{...x,text:e.target.value}:x)})}/></label><div className="subtitleTimes"><label>開始（秒）<input type="number" min="0" max={current.duration} step="0.1" value={c.start} onChange={e=>update(selected,{subtitles:(current.subtitles??[]).map(x=>x.id===c.id?{...x,start:Math.min(current.duration,Math.max(0,Number(e.target.value)))}:x)})}/></label><label>終了（秒）<input type="number" min="0" max={current.duration} step="0.1" value={c.end} onChange={e=>update(selected,{subtitles:(current.subtitles??[]).map(x=>x.id===c.id?{...x,end:Math.min(current.duration,Math.max(0,Number(e.target.value)))}:x)})}/></label></div><button className="small" onClick={()=>update(selected,{subtitles:(current.subtitles??[]).filter(x=>x.id!==c.id)})}>この字幕を削除</button></div>)}<button onClick={()=>{const start=Math.min(Math.max(0,subtitleTime),Math.max(0,current.duration-1));update(selected,{subtitles:[...(current.subtitles??[]),{id:id(),text:'',start:Math.round(start*10)/10,end:Math.min(current.duration,Math.round((start+3)*10)/10)}]})}}>＋ 字幕を追加</button><label>字幕の色<input type="color" value={current.subtitleColor??'#ffffff'} onChange={e=>update(selected,{subtitleColor:e.target.value})}/></label><label>字幕サイズ：{current.subtitleSize??22}px<input type="range" min="12" max="42" value={current.subtitleSize??22} onChange={e=>update(selected,{subtitleSize:Number(e.target.value)})}/></label><label>縁取り色<input type="color" value={current.subtitleOutline??'#202020'} onChange={e=>update(selected,{subtitleOutline:e.target.value})}/></label></div>:null}
@@ -501,7 +519,7 @@ return <main className={step==='home'?'theaterHome':'theaterEditor'}>
 </div>:null}
 <div className="actions"><button disabled={!undoStack.length} onClick={undo}>↶ 取り消し</button><button disabled={!redoStack.length} onClick={redo}>↷ やり直し</button></div>
 <div className="actions"><button disabled={selected===0} onClick={()=>move(selected,-1)}>← 前へ</button><button disabled={selected===photos.length-1} onClick={()=>move(selected,1)}>後ろへ →</button><button className="danger" onClick={()=>remove(selected)}>削除</button></div><label>演出<select value={current.effect} onChange={e=>update(selected,{effect:e.target.value as Photo['effect']})}><option value="zoom">ゆっくりズーム</option><option value="fade">フェード</option><option value="slide">スライド</option><option value="page">ページめくり</option><option value="heart">ハート</option><option value="curtain">カーテン</option><option value="none">切り替えなし</option><option value="wipe">ワイプ</option><option value="slideUp">上へスライド</option><option value="circle">円形</option><option value="blinds">ブラインド</option><option value="flash">光</option><option value="blur">ぼかし</option><option value="mosaic">モザイク</option><option value="random">ランダム</option></select></label>{mode==='photo'&&current.kind!=='video'&&<label>表示時間：{current.duration}秒<input type="range" min="2" max="15" value={current.duration} onChange={e=>update(selected,{duration:Number(e.target.value)})}/></label>}</div>}</>:null}
-{photos.length>0?<div className="actions"><button onClick={startPreview}>{playing?'■ 停止':'▶ 最初から再生'}</button>{playing&&phase==='photos'&&activePhoto?.kind==='video'&&activePhoto.keepAudio!==false?<button onClick={()=>{setPreviewSound(v=>!v);const el=previewVideo.current;if(el){el.muted=previewSound;void el.play().catch(()=>{})}}}>{previewSound?'🔊 動画音声ON':'🔇 動画音声をON'}</button>:null}</div>:null}
+
 <div className="actions" role="group" aria-label="途中保存"><button onClick={saveProject} disabled={draftBusy||importing}>{draftBusy?'処理中…':'途中保存'}</button>{projectId?<button onClick={()=>restoreProject(projectId)} disabled={draftBusy||importing}>保存した状態に戻す</button>:null}
 <button disabled={importing||draftBusy||shareConflict} onClick={saveOnline}>{shared?'共有作品を保存':'ネットに保存して共有'}</button>
 </div>
