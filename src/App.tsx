@@ -171,7 +171,8 @@ function endDrag(e?:React.PointerEvent<HTMLElement>){
 }
 
 const musicInput=useRef<HTMLInputElement>(null);
-const audioRef=useRef<HTMLAudioElement|null>(null);
+const previewBgmSource=useRef<AudioBufferSourceNode|null>(null);
+const previewBgmRequest=useRef(0);
 const soundCtx=useRef<AudioContext|null>(null);
 const bgmMaster=useRef<GainNode|null>(null);
 const synthOutput=useRef<GainNode|null>(null);
@@ -185,7 +186,7 @@ const [bgmOffset,setBgmOffset]=useState(0);
 const [musicSwitches,setMusicSwitches]=useState<MusicSwitch[]>([]);
 const switchInput=useRef<HTMLInputElement>(null);
 const switchTimers=useRef<number[]>([]);
-const switchAudio=useRef<HTMLAudioElement|null>(null);
+
 const bgmDelay=useRef<number|null>(null);
 const [pauseBgmDuringVideo,setPauseBgmDuringVideo]=useState(true);
 const previewBgmPaused=useRef(false);
@@ -414,9 +415,16 @@ const shownSticker=activePhoto?.sticker??sticker;
 const symbols:Record<string,string>={bear:'🧸',rabbit:'🐰',camera:'📷',clapper:'🎬',bouquet:'💐',crown:'👑',graduation:'🎓',diploma:'📜',cake:'🎂',gift:'🎁',balloons:'🎈',rainbow:'🌈',star:'⭐',heart:'💗',music:'🎵',treble:'🎼',sparkles:'✨'};
 
 function stopMusic(clearSwitches=true){
- if(clearSwitches){switchTimers.current.forEach(window.clearTimeout);switchTimers.current=[];if(switchAudio.current){switchAudio.current.pause();switchAudio.current=null}}
+ if(clearSwitches){switchTimers.current.forEach(window.clearTimeout);switchTimers.current=[];}
  if(bgmDelay.current!==null){window.clearTimeout(bgmDelay.current);bgmDelay.current=null}
- if(audioRef.current){audioRef.current.pause();audioRef.current.currentTime=0;audioRef.current=null}
+ previewBgmRequest.current++;
+ if(previewBgmSource.current){
+  previewBgmSource.current.stop();
+  previewBgmSource.current.disconnect();
+  previewBgmSource.current=null;
+ }
+ activeSwitchGain.current?.node.disconnect();
+ activeSwitchGain.current=null;
  if(synthTimer.current!==null){window.clearInterval(synthTimer.current);synthTimer.current=null}
  synthOutput.current?.disconnect();synthOutput.current=null;
  if(clearSwitches&&soundCtx.current){
@@ -440,24 +448,47 @@ function musicPlaybackError(error:unknown){
   ?'ブラウザがBGMの再生を止めました。「BGMを試聴」をタップして確認してください。'
   :'この音声は再生できません。別のファイルをお試しください。');
 }
+async function playPreviewAudio(url:string,offset:number,track?:MusicSwitch){
+ const request=++previewBgmRequest.current;
+ try{
+  const {ctx,master}=previewAudioContext();
+  const response=await fetch(url);
+  if(!response.ok)throw Error('BGMを読み込めませんでした');
+  const buffer=await ctx.decodeAudioData(await response.arrayBuffer());
+  if(request!==previewBgmRequest.current||soundCtx.current!==ctx)return;
+  const source=ctx.createBufferSource();
+  source.buffer=buffer;
+  source.loop=true;
+  if(track){
+   const gain=ctx.createGain();
+   gain.gain.value=track.volume/100;
+   source.connect(gain);gain.connect(master);
+   activeSwitchGain.current={id:track.id,node:gain};
+  }else source.connect(master);
+  source.start(0,offset%buffer.duration);
+  previewBgmSource.current=source;
+  setMusicPlaying(true);
+ }catch(error){
+  if(request===previewBgmRequest.current)musicPlaybackError(error);
+ }
+}
 function playMusic(elapsed=0){
  stopMusic(false);setMusicError('');
  if(bgm==='none')return;
  if(bgm==='file'&&!audioFile){setMusicError('先に音楽ファイルを選んでください');return}
  try{
   const {ctx,master}=previewAudioContext();
-  void ctx.resume().catch(musicPlaybackError);
+  if(!previewBgmPaused.current)void ctx.resume().catch(musicPlaybackError);
   if(bgm==='file'&&audioFile){
-  const audio=new Audio(audioFile.url);audio.loop=true;ctx.createMediaElementSource(audio).connect(master);audioRef.current=audio;const seek=()=>{try{audio.currentTime=(bgmOffset+elapsed)%(audio.duration||audioFile.seconds||1)}catch{}};audio.addEventListener('loadedmetadata',seek,{once:true});seek();
-  void audio.play().then(()=>{if(audioRef.current===audio)setMusicPlaying(true)}).catch(error=>{if(audioRef.current===audio){musicPlaybackError(error);setMusicPlaying(false)}});
-  return;
+   void playPreviewAudio(audioFile.url,bgmOffset+elapsed);
+   return;
   }
   const output=ctx.createGain();output.connect(master);synthOutput.current=output;
   const gentle=[261.63,329.63,392,523.25,392,329.63,293.66,349.23];
   const bright=[392,493.88,587.33,783.99,659.25,587.33,493.88,523.25];
   const notes=bgm==='gentle'?gentle:bright;
   let index=Math.floor(elapsed/(bgm==='gentle'?1.3:.85));
-  const note=()=>{if(ctx.state==='closed')return;const osc=ctx.createOscillator(),gain=ctx.createGain();
+  const note=()=>{if(ctx.state==='closed'||previewBgmPaused.current)return;const osc=ctx.createOscillator(),gain=ctx.createGain();
    osc.type=bgm==='gentle'?'sine':'triangle';osc.frequency.value=notes[index++%notes.length];
    const t=ctx.currentTime;gain.gain.setValueAtTime(0.0001,t);gain.gain.exponentialRampToValueAtTime(.10,t+.12);gain.gain.exponentialRampToValueAtTime(.0001,t+1.1);
    osc.connect(gain);gain.connect(output);osc.start(t);osc.stop(t+1.12);
@@ -466,12 +497,6 @@ function playMusic(elapsed=0){
 }
 function syncPreviewBgm(pause:boolean){
  previewBgmPaused.current=pause;
- const currentMusic=switchAudio.current??audioRef.current;
- if(audioRef.current&&switchAudio.current)audioRef.current.pause();
- if(currentMusic){
-  if(pause)currentMusic.pause();
-  else if(currentMusic.paused)void currentMusic.play().catch(()=>{});
- }
  if(soundCtx.current){
   if(pause)void soundCtx.current.suspend();
   else void soundCtx.current.resume();
@@ -525,9 +550,15 @@ function startPreview(){
  if(playing){seekPreview(previewPosition);return;}
  const position=previewPosition>=total?0:previewPosition;
  const {phase:nextPhase,index:nextIndex,offset}=previewSceneAt(position);
- const video=previewVideo.current;
  const card=nextPhase==='intro'?openingClip:nextPhase==='outro'?endingClip:null;
  const clip=nextPhase==='photos'?photos[nextIndex]:card;
+ stopMusic();
+ const pause=pauseBgmDuringVideo&&clip?.kind==='video';
+ previewBgmPaused.current=pause;
+ if(bgm!=='none'||orderedSwitches.length){
+  try{void previewAudioContext().ctx.resume().catch(musicPlaybackError)}catch(error){musicPlaybackError(error)}
+ }
+ const video=previewVideo.current;
  if(video&&(clip?.kind==='video'||openingClip?.kind==='video'||endingClip?.kind==='video'||photos.some(photo=>photo.kind==='video'))){
   const adjustedVideo=photos.find(photo=>photo.kind==='video'&&clipGainValue(photo.audioVolume)!==1);
   if(adjustedVideo)setPreviewClipVolume(adjustedVideo.audioVolume,true);
@@ -539,37 +570,14 @@ function startPreview(){
  setPreviewPosition(position);
  setScrubbing(false);setPlayIndex(nextIndex);setPhase(nextPhase);setSceneOffset(offset);setPlaying(true);
  setSceneKey(key=>key+1);
- stopMusic();
- const pause=pauseBgmDuringVideo&&clip?.kind==='video';
- previewBgmPaused.current=pause;
- if(bgm!=='none'||orderedSwitches.length){
-  try{void previewAudioContext().ctx.resume().catch(musicPlaybackError)}catch(error){musicPlaybackError(error)}
- }
  const activeSwitch=[...orderedSwitches].reverse().find(m=>switchAt(m)<=position);
  function startSwitch(m:MusicSwitch,elapsed:number){
-  try{
-  switchAudio.current?.pause();
-  audioRef.current?.pause();
-  if(synthTimer.current!==null){window.clearInterval(synthTimer.current);synthTimer.current=null;}
-  synthOutput.current?.disconnect();synthOutput.current=null;
-  const {ctx,master}=previewAudioContext();
-  activeSwitchGain.current?.node.disconnect();
-  const audio=new Audio(m.url);
-  const gain=ctx.createGain();
-  gain.gain.value=m.volume/100;
-  ctx.createMediaElementSource(audio).connect(gain);
-  gain.connect(master);
-  activeSwitchGain.current={id:m.id,node:gain};
-  switchAudio.current=audio;
-  audio.loop=true;
-  const seek=()=>{if(Number.isFinite(audio.duration)&&audio.duration>0)audio.currentTime=(m.offset+elapsed)%audio.duration};
-  audio.addEventListener('loadedmetadata',seek,{once:true});seek();
-  if(!previewBgmPaused.current)void audio.play().catch(error=>{if(switchAudio.current===audio)musicPlaybackError(error)});
-  }catch(error){musicPlaybackError(error)}
+  stopMusic(false);
+  void playPreviewAudio(m.url,m.offset+elapsed,m);
  }
  if(activeSwitch)startSwitch(activeSwitch,position-switchAt(activeSwitch));
  else if(position>=bgmStart){playMusic(position-bgmStart);syncPreviewBgm(pause)}
- else bgmDelay.current=window.setTimeout(()=>{bgmDelay.current=null;if(!switchAudio.current){playMusic();syncPreviewBgm(previewBgmPaused.current)}},(bgmStart-position)*1000);
+ else bgmDelay.current=window.setTimeout(()=>{bgmDelay.current=null;playMusic();syncPreviewBgm(previewBgmPaused.current)},(bgmStart-position)*1000);
  for(const m of orderedSwitches){
   const at=switchAt(m);
   if(at>position)switchTimers.current.push(window.setTimeout(()=>startSwitch(m,0),(at-position)*1000));
