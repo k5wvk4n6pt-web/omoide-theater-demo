@@ -49,6 +49,8 @@ const [mixVideos,setMixVideos]=useState<File[]>([]);
 const [mixImage,setMixImage]=useState<File|null>(null);
 const [mixMode,setMixMode]=useState<VoiceMixMode>('together');
 const [mixNotice,setMixNotice]=useState('');
+const [mixResult,setMixResult]=useState<{blob:Blob;url:string;extension:string;duration:number}|null>(null);
+useEffect(()=>()=>{if(mixResult)URL.revokeObjectURL(mixResult.url)},[mixResult]);
 
 const [importNotice,setImportNotice]=useState('');
 const [draftInfo,setDraftInfo]=useState('');
@@ -365,10 +367,11 @@ async function addPhotos(files:FileList|null){
   setImporting(false);
  }
 }
-async function addVoiceMix(){
+async function prepareVoiceMix(){
  if(!mixImage||mixVideos.length<2||importing)return;
  setImporting(true);
  setPlaying(false);stopMusic();
+ setMixResult(null);
  setMixNotice('動画の音声を読み込んでいます…');
  let context:AudioContext|undefined;
  const imageUrl=URL.createObjectURL(mixImage);
@@ -383,14 +386,8 @@ async function addVoiceMix(){
    bgm:'none',volume:0,voiceMix:{context,buffer:audio},
    onProgress:value=>setMixNotice('音声と画像を合成中… '+value+'%'),
   });
-  setSelected(photosRef.current.length);
-  setPhotos(previous=>[...previous,{
-   id:id(),kind:'video',name:'音声合成.'+extension,url:URL.createObjectURL(blob),
-   duration,sourceDuration:duration,trimStart:0,keepAudio:true,effect:'none',
-  }]);
-  setScrubbing(false);setPreviewPosition(0);setEditPage('main');
-  setMixVideos([]);setMixImage(null);setMixOpen(false);
-  setImportNotice('音声と画像を合成し、本編に追加しました。');
+  setMixResult({blob,url:URL.createObjectURL(blob),extension,duration});
+  setMixNotice('合成できました。再生してご確認ください。');
  }catch(error){
   setMixNotice(error instanceof Error?error.message:'音声を合成できませんでした。');
  }finally{
@@ -398,6 +395,19 @@ async function addVoiceMix(){
   if(context&&context.state!=='closed')void context.close().catch(()=>{});
   setImporting(false);
  }
+}
+function addVoiceMix(){
+ if(!mixResult||importing||draftBusy)return;
+ const {blob,extension,duration}=mixResult;
+ setPlaying(false);stopMusic();
+ setSelected(photosRef.current.length);
+ setPhotos(previous=>[...previous,{
+  id:id(),kind:'video',name:'音声合成.'+extension,url:URL.createObjectURL(blob),
+  duration,sourceDuration:duration,trimStart:0,keepAudio:true,effect:'none',
+ }]);
+ setScrubbing(false);setPreviewPosition(0);setEditPage('main');
+ setMixVideos([]);setMixImage(null);setMixResult(null);setMixOpen(false);
+ setImportNotice('音声と画像を合成し、本編に追加しました。');
 }
 function importSelectedMedia(event:ChangeEvent<HTMLInputElement>){
  const input=event.currentTarget;
@@ -757,7 +767,7 @@ async function eraseProject(targetId:string){
 async function copyProject(targetId:string){
  try{await duplicateProject(targetId,id());await refreshProjects();setDraftInfo('作品を複製しました')}catch{setDraftInfo('複製できませんでした')}
 }
-function newProject(){setMixOpen(false);setMixVideos([]);setMixImage(null);setMixMode('together');setMixNotice('');openingRequest.current++;endingRequest.current++;setOpeningMedia(null);setEndingMedia(null);setCardError('');leaveSharedProject();setPlaying(false);setPreviewPosition(0);setScrubbing(false);stopMusic();setPhotos([]);setProjectId(null);setSelected(0);setUndoStack([]);setRedoStack([]);setAudioFile(null);setMusicSwitches([]);setTitle('');setOpening('fuji_graduation');setEndingStyle('message');setEnding('ありがとう、たくさんの思い出');setEditPage('opening');setStep('edit');setDraftInfo('')}
+function newProject(){setMixResult(null);setMixOpen(false);setMixVideos([]);setMixImage(null);setMixMode('together');setMixNotice('');openingRequest.current++;endingRequest.current++;setOpeningMedia(null);setEndingMedia(null);setCardError('');leaveSharedProject();setPlaying(false);setPreviewPosition(0);setScrubbing(false);stopMusic();setPhotos([]);setProjectId(null);setSelected(0);setUndoStack([]);setRedoStack([]);setAudioFile(null);setMusicSwitches([]);setTitle('');setOpening('fuji_graduation');setEndingStyle('message');setEnding('ありがとう、たくさんの思い出');setEditPage('opening');setStep('edit');setDraftInfo('')}
 
 async function makeMovie(){
  if(!photos.length||exporting)return;
@@ -824,14 +834,18 @@ return <main className={step==='home'?'theaterHome':'theaterEditor'}>
 </div>:null}<p className="note" role="status" hidden={!importNotice}>{importNotice}</p>
 {editPage==='main'&&mixOpen?<section className="designBox">
  <h3>動画の音声を合成</h3>
- <label>音声を使う動画（2本以上）<input type="file" accept="video/*,.mov,.mp4,.m4v,.webm" multiple disabled={importing} onChange={e=>setMixVideos(Array.from(e.currentTarget.files??[]))}/></label>
+ <label>音声を使う動画（2本以上）<input type="file" accept="video/*,.mov,.mp4,.m4v,.webm" multiple disabled={importing} onChange={e=>{setMixResult(null);setMixNotice('');setMixVideos(Array.from(e.currentTarget.files??[]))}}/></label>
  {mixVideos.length>0?<ol>{mixVideos.map((file,index)=><li key={index}>{file.name}</li>)}</ol>:null}
- <label>表示する画像<input type="file" accept="image/*" disabled={importing} onChange={e=>setMixImage(e.currentTarget.files?.[0]??null)}/></label>
- <label>音声の流し方<select value={mixMode} disabled={importing} onChange={e=>setMixMode(e.currentTarget.value as VoiceMixMode)}>
+ <label>表示する画像<input type="file" accept="image/*" disabled={importing} onChange={e=>{setMixResult(null);setMixNotice('');setMixImage(e.currentTarget.files?.[0]??null)}}/></label>
+ <label>音声の流し方<select value={mixMode} disabled={importing} onChange={e=>{setMixResult(null);setMixNotice('');setMixMode(e.currentTarget.value as VoiceMixMode)}}>
   <option value="together">同時に重ねる</option>
   <option value="sequential">一覧の順に流す</option>
  </select></label>
- <button type="button" disabled={importing||draftBusy||mixVideos.length<2||!mixImage} onClick={()=>void addVoiceMix()}>合成して本編に追加</button>
+ <button type="button" disabled={importing||draftBusy||mixVideos.length<2||!mixImage} onClick={()=>void prepareVoiceMix()}>合成してプレビューを作る</button>
+ {mixResult?<div>
+  <video src={mixResult.url} controls playsInline preload="metadata" style={{display:'block',width:'100%',maxHeight:320,background:'#211629'}} aria-label="合成した音声と画像のプレビュー"/>
+  <button type="button" disabled={importing||draftBusy} onClick={addVoiceMix}>本編に追加</button>
+ </div>:null}
  {mixNotice?<p className="note" role="status">{mixNotice}</p>:null}
 </section>:null}
 <section className="sharedPreview"><div className="previewHeading"><h3>{scrubScene?'🎥 全体プレビュー':openingStill?'🎬 オープニングプレビュー':endingStill?'🌷 エンディングプレビュー':'🎥 全体プレビュー'}</h3>{photos.length>0?<button type="button" onClick={startPreview}>{playing?'■ 停止':previewPosition>0&&previewPosition<total?'▶ ここから再生':'▶ 最初から再生'}</button>:null}</div><div className={'preview '+aspect}><div className={'previewFrame'+(openingStill?' openingStill':'')}>

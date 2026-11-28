@@ -1,14 +1,44 @@
 export type VoiceMixMode = 'together' | 'sequential';
 
+async function decodeVideoAudio(context: AudioContext, file: File) {
+ try {
+  return await context.decodeAudioData(await file.arrayBuffer());
+ } catch {
+  // Some browsers cannot decode a MOV directly, even when its audio track is supported.
+ }
+ const {Input, BlobSource, ALL_FORMATS, Conversion, Output, BufferTarget, Mp4OutputFormat, WavOutputFormat} = await import('mediabunny');
+ const input = new Input({source: new BlobSource(file), formats: ALL_FORMATS});
+ try {
+  if (!await input.getPrimaryAudioTrack()) throw Error('音声トラックがありません。');
+  for (const format of [new Mp4OutputFormat(), new WavOutputFormat()]) {
+   try {
+    const target = new BufferTarget();
+    const conversion = await Conversion.init({
+     input, output: new Output({format, target}), video: {discard: true},
+     tracks: 'primary', showWarnings: false,
+    });
+    if (!conversion.isValid) continue;
+    await conversion.execute();
+    if (target.buffer) return await context.decodeAudioData(target.buffer);
+   } catch {
+    // Try the other audio container before reporting a format error.
+   }
+  }
+  throw Error('このブラウザで音声形式を読み込めませんでした。');
+ } finally {
+  input.dispose();
+ }
+}
+
 export async function mixVideoAudio(context: AudioContext, files: File[], mode: VoiceMixMode) {
  const clips: AudioBuffer[] = [];
  for (const file of files) {
   try {
-   const audio = await context.decodeAudioData(await file.arrayBuffer());
-   if (!audio.length) throw Error('Empty audio');
+   const audio = await decodeVideoAudio(context, file);
+   if (!audio.length) throw Error('音声データが空です。');
    clips.push(audio);
-  } catch {
-   throw Error(file.name + 'の音声を読み込めませんでした。音声入りの動画を選んでください。');
+  } catch (error) {
+   throw Error(file.name + '：' + (error instanceof Error?error.message:'音声を読み込めませんでした。'));
   }
  }
  const duration = mode === 'together'
