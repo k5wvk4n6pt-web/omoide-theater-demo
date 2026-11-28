@@ -2,7 +2,7 @@ import {useEffect,useMemo,useRef,useState} from 'react';
 import type {ChangeEvent,CSSProperties} from 'react';
 import {clipGainValue,exportMovie} from './exportMovie';
 import {mixVideoAudio} from './mixVideoAudio';
-import type {VoiceMixMode} from './mixVideoAudio';
+import type {VoiceMixClip,VoiceMixMode} from './mixVideoAudio';
 import {listProjects,saveProject as persistProject,loadProject,deleteProject,duplicateProject} from './draftStore';
 import type {ProjectSummary,StoredProject} from './draftStore';
 import {loadSharedProject,newShareToken,saveSharedProject,shareTokenFromHash,SharedProjectConflict} from './sharedProject';
@@ -14,6 +14,50 @@ type SubtitleCue={id:string;text:string;start:number;end:number};
 type MusicSwitch={id:string;name:string;url:string;seconds:number;start:number;anchor:'time'|'photo';photoId?:string;offset:number;volume:number;fade:number};
 type Photo={subtitles?:SubtitleCue[];subtitleColor?:string;subtitleSize?:number;subtitleOutline?:string;trimStart?:number;sourceDuration?:number;keepAudio?:boolean;audioVolume?:number;kind?:'image'|'video';id:string;name:string;url:string;duration:number;effect:'fade'|'zoom'|'slide'|'page'|'heart'|'curtain'|'none'|'wipe'|'slideUp'|'circle'|'blinds'|'flash'|'blur'|'mosaic'|'random';sticker?:string;caption?:string;zoom?:number;offsetX?:number;offsetY?:number;captionX?:number;captionY?:number;captionFont?:string;captionColor?:string;captionSize?:number;captionWeight?:number;captionOutline?:boolean;captionOutlineColor?:string;captionBackground?:boolean;captionMotion?:'none'|'fade'|'rise'|'slide'};
 const id=()=>Math.random().toString(36).slice(2);
+function VoiceTrimEditor({clip,disabled,onChange}:{clip:VoiceMixClip;disabled:boolean;onChange:(clip:VoiceMixClip)=>void}){
+ const player=useRef<HTMLVideoElement>(null);
+ const [url,setUrl]=useState('');
+ const [length,setLength]=useState<number|null>(null);
+ const [notice,setNotice]=useState('');
+ useEffect(()=>{
+  const source=URL.createObjectURL(clip.file);
+  setUrl(source);
+  return()=>URL.revokeObjectURL(source);
+ },[clip.file]);
+ const end=clip.end??length;
+ function change(start:number,finish:number|null){
+  player.current?.pause();
+  setNotice('');
+  onChange({...clip,start,end:finish});
+ }
+ function audition(){
+  const video=player.current;
+  if(!video||video.readyState<1)return;
+  setNotice('');
+  try{
+   video.currentTime=clip.start;
+   void video.play().catch(()=>setNotice('試聴できませんでした。'));
+  }catch{setNotice('試聴できませんでした。')}
+ }
+ return <div className="videoTrim">
+  <label>音声の開始位置（秒）
+   <input type="number" min={0} max={end??undefined} step=".1" value={clip.start} disabled={disabled} onChange={e=>change(Math.max(0,Number(e.currentTarget.value)),clip.end)}/>
+  </label>
+  <label>音声の終了位置（秒）
+   <input type="number" min={clip.start} max={length??undefined} step=".1" value={clip.end??''} placeholder={length===null?'最後まで':length.toFixed(1)} disabled={disabled} onChange={e=>change(clip.start,e.currentTarget.value===''?null:Number(e.currentTarget.value))}/>
+  </label>
+  <video ref={player} src={url||undefined} playsInline preload="metadata" style={{width:'100%',maxHeight:180}} aria-label={clip.file.name+'の試聴'}
+   onLoadedMetadata={e=>{const duration=e.currentTarget.duration;if(Number.isFinite(duration))setLength(duration)}}
+   onTimeUpdate={e=>{if(end!==null&&e.currentTarget.currentTime>=end)e.currentTarget.pause()}}
+   onError={()=>setNotice('この動画は個別に試聴できません。合成後のプレビューで確認してください。')}/>
+  <div className="actions">
+   <button type="button" disabled={disabled||length===null||end!==null&&clip.start>=end} onClick={audition}>▶ 選んだ範囲を試聴</button>
+   <button type="button" disabled={disabled} onClick={()=>player.current?.pause()}>停止</button>
+   <button type="button" disabled={disabled||clip.start===0&&clip.end===null} onClick={()=>change(0,null)}>全体に戻す</button>
+  </div>
+  {notice?<p role="status">{notice}</p>:null}
+ </div>;
+}
 function VideoThumbnail({url,name}:{url:string;name:string}){
  const [poster,setPoster]=useState<string|null>(null);
  const videoRef=useRef<HTMLVideoElement>(null);
@@ -45,7 +89,7 @@ export default function App(){
 const [photos,setPhotos]=useState<Photo[]>([]);
 const [importing,setImporting]=useState(false);
 const [mixOpen,setMixOpen]=useState(false);
-const [mixVideos,setMixVideos]=useState<File[]>([]);
+const [mixVideos,setMixVideos]=useState<VoiceMixClip[]>([]);
 const [mixImage,setMixImage]=useState<File|null>(null);
 const [mixMode,setMixMode]=useState<VoiceMixMode>('together');
 const [mixNotice,setMixNotice]=useState('');
@@ -834,8 +878,16 @@ return <main className={step==='home'?'theaterHome':'theaterEditor'}>
 </div>:null}<p className="note" role="status" hidden={!importNotice}>{importNotice}</p>
 {editPage==='main'&&mixOpen?<section className="designBox">
  <h3>動画の音声を合成</h3>
- <label>音声を使う動画（2本以上）<input type="file" accept="video/*,.mov,.mp4,.m4v,.webm" multiple disabled={importing} onChange={e=>{setMixResult(null);setMixNotice('');setMixVideos(Array.from(e.currentTarget.files??[]))}}/></label>
- {mixVideos.length>0?<ol>{mixVideos.map((file,index)=><li key={index}>{file.name}</li>)}</ol>:null}
+ <label>音声を使う動画（2本以上）<input type="file" accept="video/*,.mov,.mp4,.m4v,.webm" multiple disabled={importing} onChange={e=>{setMixResult(null);setMixNotice('');setMixVideos(Array.from(e.currentTarget.files??[],file=>({file,start:0,end:null})))}}/></label>
+ {mixVideos.length>0?<ol>{mixVideos.map((clip,index)=><li key={index}>
+  <details onToggle={e=>{if(!e.currentTarget.open)e.currentTarget.querySelector('video')?.pause()}}>
+   <summary>{clip.file.name} の音声をトリミング{clip.start>0||clip.end!==null?'（設定済み）':''}</summary>
+   <VoiceTrimEditor key={clip.file.name+clip.file.lastModified} clip={clip} disabled={importing} onChange={updated=>{
+    setMixResult(null);setMixNotice('');
+    setMixVideos(previous=>previous.map((item,i)=>i===index?updated:item));
+   }}/>
+  </details>
+ </li>)}</ol>:null}
  <label>表示する画像<input type="file" accept="image/*" disabled={importing} onChange={e=>{setMixResult(null);setMixNotice('');setMixImage(e.currentTarget.files?.[0]??null)}}/></label>
  <label>音声の流し方<select value={mixMode} disabled={importing} onChange={e=>{setMixResult(null);setMixNotice('');setMixMode(e.currentTarget.value as VoiceMixMode)}}>
   <option value="together">同時に重ねる</option>

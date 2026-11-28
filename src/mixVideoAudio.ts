@@ -1,3 +1,5 @@
+export type VoiceMixClip = {file: File; start: number; end: number | null};
+
 export type VoiceMixMode = 'together' | 'sequential';
 
 async function decodeVideoAudio(context: AudioContext, file: File) {
@@ -30,13 +32,15 @@ async function decodeVideoAudio(context: AudioContext, file: File) {
  }
 }
 
-export async function mixVideoAudio(context: AudioContext, files: File[], mode: VoiceMixMode) {
- const clips: AudioBuffer[] = [];
- for (const file of files) {
+export async function mixVideoAudio(context: AudioContext, inputs: VoiceMixClip[], mode: VoiceMixMode) {
+ const clips: {audio: AudioBuffer; start: number; duration: number}[] = [];
+ for (const {file,start,end} of inputs) {
   try {
    const audio = await decodeVideoAudio(context, file);
    if (!audio.length) throw Error('音声データが空です。');
-   clips.push(audio);
+   const finish = Math.min(end ?? audio.duration, audio.duration);
+   if (start < 0 || start >= finish) throw Error('音声の開始・終了位置を確認してください。');
+   clips.push({audio,start,duration:finish-start});
   } catch (error) {
    throw Error(file.name + '：' + (error instanceof Error?error.message:'音声を読み込めませんでした。'));
   }
@@ -49,9 +53,9 @@ export async function mixVideoAudio(context: AudioContext, files: File[], mode: 
  let offset = 0;
  for (const clip of clips) {
   const source = renderer.createBufferSource();
-  source.buffer = clip;
+  source.buffer = clip.audio;
   source.connect(renderer.destination);
-  source.start(offset);
+  source.start(offset, clip.start, clip.duration);
   if (mode === 'sequential') offset += clip.duration;
  }
  const mixed = await renderer.startRendering();
