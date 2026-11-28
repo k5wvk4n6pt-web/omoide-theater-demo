@@ -913,5 +913,5 @@ return <main className={step==='home'?'theaterHome':'theaterEditor'}>
  : '共有メニューに「ビデオを保存」が表示される場合は、写真アプリにも保存できます。'}</p></div>:null}
 </section><div className="editPageActions"><button onClick={()=>setEditPage('ending')}>← エンディング</button></div></>:null}<button className="secondary" disabled={importing||draftBusy} onClick={()=>{leaveSharedProject();setImportNotice('');setStep('home')}}>ホームに戻る</button></section>:null}
 <input ref={switchInput} type="file" accept="audio/*,.mp3,.m4a,.wav,.aac" hidden onChange={e=>{void addMusicSwitch(e.target.files);e.target.value=''}}/><input ref={musicInput} type="file" accept="audio/*,.mp3,.m4a,.wav,.aac" hidden onChange={e=>{importMusic(e.target.files);e.target.value=''}}/>
-{step!=='home'?<footer className="graduationEditorFooter"><img src={editorLandscape} width={551} height={1536} alt="おもいでシアター · 試作版 v8.20"/></footer>:null}</main>
+{step!=='home'?<footer className="graduationEditorFooter"><img src={editorLandscape} width={551} height={1536} alt=""/><span className="graduationEditorVersion">おもいでシアター · 試作版 v0.0</span></footer>:null}</main>
 }

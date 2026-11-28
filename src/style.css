@@ -228,6 +228,18 @@ input[type="file"][hidden]{display:none!important}
   background:linear-gradient(to bottom, #bce9ff 79%, #a9ce27 88%);
 }
 .graduationEditorFooter img {bottom:0}
+.graduationEditorVersion {
+  position:absolute;
+  inset:10% 26% auto;
+  min-height:22%;
+  display:grid;
+  place-items:center;
+  background:linear-gradient(90deg, transparent, #fffafc 9%, #fffafc 91%, transparent);
+  font-size:clamp(.64rem,2.5vw,.9rem);
+  font-weight:700;
+  white-space:nowrap;
+}
+
 .theaterEditor > .panel {
   position:relative;
   margin: clamp(-14px,-2vw,-7px) clamp(8px,3.3vw,18px) clamp(12px,4vw,24px);
