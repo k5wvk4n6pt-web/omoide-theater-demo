@@ -1,4 +1,4 @@
-export type VoiceMixClip = {file: File; start: number; end: number | null};
+export type VoiceMixClip = {file: File; start: number; end: number | null; speed?: number};
 
 export type VoiceMixMode = 'together' | 'sequential';
 
@@ -33,30 +33,31 @@ async function decodeVideoAudio(context: AudioContext, file: File) {
 }
 
 export async function mixVideoAudio(context: AudioContext, inputs: VoiceMixClip[], mode: VoiceMixMode) {
- const clips: {audio: AudioBuffer; start: number; duration: number}[] = [];
- for (const {file,start,end} of inputs) {
+ const clips: {audio: AudioBuffer; start: number; duration: number; speed: number}[] = [];
+ for (const {file,start,end,speed=1} of inputs) {
   try {
    const audio = await decodeVideoAudio(context, file);
    if (!audio.length) throw Error('音声データが空です。');
    const finish = Math.min(end ?? audio.duration, audio.duration);
    if (start < 0 || start >= finish) throw Error('音声の開始・終了位置を確認してください。');
-   clips.push({audio,start,duration:finish-start});
+   clips.push({audio,start,duration:finish-start,speed});
   } catch (error) {
    throw Error(file.name + '：' + (error instanceof Error?error.message:'音声を読み込めませんでした。'));
   }
  }
  const duration = mode === 'together'
-  ? Math.max(...clips.map(clip => clip.duration))
-  : clips.reduce((seconds, clip) => seconds + clip.duration, 0);
+  ? Math.max(...clips.map(clip => clip.duration / clip.speed))
+  : clips.reduce((seconds, clip) => seconds + clip.duration / clip.speed, 0);
  const rate = context.sampleRate;
  const renderer = new OfflineAudioContext(2, Math.ceil(duration * rate), rate);
  let offset = 0;
  for (const clip of clips) {
   const source = renderer.createBufferSource();
   source.buffer = clip.audio;
+  source.playbackRate.value = clip.speed;
   source.connect(renderer.destination);
   source.start(offset, clip.start, clip.duration);
-  if (mode === 'sequential') offset += clip.duration;
+  if (mode === 'sequential') offset += clip.duration / clip.speed;
  }
  const mixed = await renderer.startRendering();
  const channels = Array.from({length: mixed.numberOfChannels}, (_, index) => mixed.getChannelData(index));

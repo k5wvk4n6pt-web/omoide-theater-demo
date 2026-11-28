@@ -25,6 +25,8 @@ function VoiceTrimEditor({clip,disabled,onChange}:{clip:VoiceMixClip;disabled:bo
   return()=>URL.revokeObjectURL(source);
  },[clip.file]);
  const end=clip.end??length;
+ const speed=clip.speed??1;
+ const trimGap=Math.min(.05,length??.05);
  function change(start:number,finish:number|null){
   player.current?.pause();
   setNotice('');
@@ -36,15 +38,40 @@ function VoiceTrimEditor({clip,disabled,onChange}:{clip:VoiceMixClip;disabled:bo
   setNotice('');
   try{
    video.currentTime=clip.start;
+   video.playbackRate=speed;
+   video.preservesPitch=false;
    void video.play().catch(()=>setNotice('試聴できませんでした。'));
   }catch{setNotice('試聴できませんでした。')}
  }
  return <div className="videoTrim">
-  <label>音声の開始位置（秒）
-   <input type="number" min={0} max={end??undefined} step=".1" value={clip.start} disabled={disabled} onChange={e=>change(Math.max(0,Number(e.currentTarget.value)),clip.end)}/>
-  </label>
-  <label>音声の終了位置（秒）
-   <input type="number" min={clip.start} max={length??undefined} step=".1" value={clip.end??''} placeholder={length===null?'最後まで':length.toFixed(1)} disabled={disabled} onChange={e=>change(clip.start,e.currentTarget.value===''?null:Number(e.currentTarget.value))}/>
+  <div role="group" aria-label="音声を使う範囲">
+   <div className="voiceTrimTimes">
+    <span>開始 {clip.start.toFixed(2)} 秒</span>
+    <span>終了 {end===null?'読み込み中':end.toFixed(2)+' 秒'}</span>
+   </div>
+   <div className="voiceTrimRange" style={{
+    '--trim-start':(length?clip.start/length*100:0)+'%',
+    '--trim-end':(length&&end!==null?end/length*100:100)+'%',
+   } as CSSProperties}>
+    <input type="range" aria-label="音声の開始位置" aria-valuetext={clip.start.toFixed(2)+' 秒'}
+     min={0} max={length??0} step="any" value={clip.start} disabled={disabled||!length}
+     onChange={e=>change(Math.min(e.currentTarget.valueAsNumber,(end??0)-trimGap),clip.end)}/>
+    <input type="range" aria-label="音声の終了位置" aria-valuetext={end?.toFixed(2)+' 秒'}
+     min={0} max={length??0} step="any" value={end??0} disabled={disabled||!length}
+     onChange={e=>{
+      const finish=Math.max(e.currentTarget.valueAsNumber,clip.start+trimGap);
+      change(clip.start,finish===length?null:finish);
+     }}/>
+   </div>
+  </div>
+  <label>この動画の音声速度（{speed.toFixed(2)}倍）
+   <input type="range" min=".5" max="2" step=".05" value={speed} disabled={disabled}
+    aria-valuetext={speed.toFixed(2)+' 倍'}
+    onChange={e=>{
+     player.current?.pause();
+     setNotice('');
+     onChange({...clip,speed:e.currentTarget.valueAsNumber});
+    }}/>
   </label>
   <video ref={player} src={url||undefined} playsInline preload="metadata" style={{width:'100%',maxHeight:180}} aria-label={clip.file.name+'の試聴'}
    onLoadedMetadata={e=>{const duration=e.currentTarget.duration;if(Number.isFinite(duration))setLength(duration)}}
@@ -879,7 +906,7 @@ return <main className={step==='home'?'theaterHome':'theaterEditor'}>
 {editPage==='main'&&mixOpen?<section className="designBox">
  <h3>動画の音声を合成</h3>
  <label>音声を使う動画（2本以上）<input type="file" accept="video/*,.mov,.mp4,.m4v,.webm" multiple disabled={importing} onChange={e=>{setMixResult(null);setMixNotice('');setMixVideos(Array.from(e.currentTarget.files??[],file=>({file,start:0,end:null})))}}/></label>
- {mixVideos.length>0?<ol>{mixVideos.map((clip,index)=><li key={index}>
+ {mixVideos.length>0?<ol className="voiceTrimList">{mixVideos.map((clip,index)=><li key={index}>
   <details onToggle={e=>{if(!e.currentTarget.open)e.currentTarget.querySelector('video')?.pause()}}>
    <summary>{clip.file.name} の音声をトリミング{clip.start>0||clip.end!==null?'（設定済み）':''}</summary>
    <VoiceTrimEditor key={clip.file.name+clip.file.lastModified} clip={clip} disabled={importing} onChange={updated=>{
