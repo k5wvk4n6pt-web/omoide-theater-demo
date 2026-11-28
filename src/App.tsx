@@ -1,6 +1,8 @@
 import {useEffect,useMemo,useRef,useState} from 'react';
 import type {ChangeEvent,CSSProperties} from 'react';
 import {clipGainValue,exportMovie} from './exportMovie';
+import {mixVideoAudio} from './mixVideoAudio';
+import type {VoiceMixMode} from './mixVideoAudio';
 import {listProjects,saveProject as persistProject,loadProject,deleteProject,duplicateProject} from './draftStore';
 import type {ProjectSummary,StoredProject} from './draftStore';
 import {loadSharedProject,newShareToken,saveSharedProject,shareTokenFromHash,SharedProjectConflict} from './sharedProject';
@@ -42,6 +44,12 @@ function VideoThumbnail({url,name}:{url:string;name:string}){
 export default function App(){
 const [photos,setPhotos]=useState<Photo[]>([]);
 const [importing,setImporting]=useState(false);
+const [mixOpen,setMixOpen]=useState(false);
+const [mixVideos,setMixVideos]=useState<File[]>([]);
+const [mixImage,setMixImage]=useState<File|null>(null);
+const [mixMode,setMixMode]=useState<VoiceMixMode>('together');
+const [mixNotice,setMixNotice]=useState('');
+
 const [importNotice,setImportNotice]=useState('');
 const [draftInfo,setDraftInfo]=useState('');
 const [draftBusy,setDraftBusy]=useState(false);
@@ -354,6 +362,40 @@ async function addPhotos(files:FileList|null){
   urls.forEach(url=>URL.revokeObjectURL(url));
   setImportNotice('写真・動画を読み込めませんでした。ファイルを選び直してください。');
  } finally {
+  setImporting(false);
+ }
+}
+async function addVoiceMix(){
+ if(!mixImage||mixVideos.length<2||importing)return;
+ setImporting(true);
+ setPlaying(false);stopMusic();
+ setMixNotice('動画の音声を読み込んでいます…');
+ let context:AudioContext|undefined;
+ const imageUrl=URL.createObjectURL(mixImage);
+ try{
+  context=new AudioContext();
+  await context.resume();
+  const audio=await mixVideoAudio(context,mixVideos,mixMode);
+  const duration=audio.duration;
+  const {blob,extension}=await exportMovie({
+   photos:[{url:imageUrl,kind:'image',duration,effect:'none'}],durations:[duration],
+   opening:'none',endingStyle:'none',title:'',ending:'',sticker:'none',curtainColor:'red',aspect,
+   bgm:'none',volume:0,voiceMix:{context,buffer:audio},
+   onProgress:value=>setMixNotice('音声と画像を合成中… '+value+'%'),
+  });
+  setSelected(photosRef.current.length);
+  setPhotos(previous=>[...previous,{
+   id:id(),kind:'video',name:'音声合成.'+extension,url:URL.createObjectURL(blob),
+   duration,sourceDuration:duration,trimStart:0,keepAudio:true,effect:'none',
+  }]);
+  setScrubbing(false);setPreviewPosition(0);setEditPage('main');
+  setMixVideos([]);setMixImage(null);setMixOpen(false);
+  setImportNotice('音声と画像を合成し、本編に追加しました。');
+ }catch(error){
+  setMixNotice(error instanceof Error?error.message:'音声を合成できませんでした。');
+ }finally{
+  URL.revokeObjectURL(imageUrl);
+  if(context&&context.state!=='closed')void context.close().catch(()=>{});
   setImporting(false);
  }
 }
@@ -715,7 +757,7 @@ async function eraseProject(targetId:string){
 async function copyProject(targetId:string){
  try{await duplicateProject(targetId,id());await refreshProjects();setDraftInfo('作品を複製しました')}catch{setDraftInfo('複製できませんでした')}
 }
-function newProject(){openingRequest.current++;endingRequest.current++;setOpeningMedia(null);setEndingMedia(null);setCardError('');leaveSharedProject();setPlaying(false);setPreviewPosition(0);setScrubbing(false);stopMusic();setPhotos([]);setProjectId(null);setSelected(0);setUndoStack([]);setRedoStack([]);setAudioFile(null);setMusicSwitches([]);setTitle('');setOpening('fuji_graduation');setEndingStyle('message');setEnding('ありがとう、たくさんの思い出');setEditPage('opening');setStep('edit');setDraftInfo('')}
+function newProject(){setMixOpen(false);setMixVideos([]);setMixImage(null);setMixMode('together');setMixNotice('');openingRequest.current++;endingRequest.current++;setOpeningMedia(null);setEndingMedia(null);setCardError('');leaveSharedProject();setPlaying(false);setPreviewPosition(0);setScrubbing(false);stopMusic();setPhotos([]);setProjectId(null);setSelected(0);setUndoStack([]);setRedoStack([]);setAudioFile(null);setMusicSwitches([]);setTitle('');setOpening('fuji_graduation');setEndingStyle('message');setEnding('ありがとう、たくさんの思い出');setEditPage('opening');setStep('edit');setDraftInfo('')}
 
 async function makeMovie(){
  if(!photos.length||exporting)return;
@@ -778,7 +820,20 @@ return <main className={step==='home'?'theaterHome':'theaterEditor'}>
  ＋ 動画を追加する
  <input type="file" accept="video/*,.mov,.mp4,.m4v,.webm" multiple disabled={importing||draftBusy} onChange={importSelectedMedia}/>
 </label>
+{editPage==='main'?<button type="button" disabled={importing||draftBusy} aria-expanded={mixOpen} onClick={()=>{setMixOpen(!mixOpen);setMixNotice('')}}>＋ 動画の音声を合成する</button>:null}
 </div>:null}<p className="note" role="status" hidden={!importNotice}>{importNotice}</p>
+{editPage==='main'&&mixOpen?<section className="designBox">
+ <h3>動画の音声を合成</h3>
+ <label>音声を使う動画（2本以上）<input type="file" accept="video/*,.mov,.mp4,.m4v,.webm" multiple disabled={importing} onChange={e=>setMixVideos(Array.from(e.currentTarget.files??[]))}/></label>
+ {mixVideos.length>0?<ol>{mixVideos.map((file,index)=><li key={index}>{file.name}</li>)}</ol>:null}
+ <label>表示する画像<input type="file" accept="image/*" disabled={importing} onChange={e=>setMixImage(e.currentTarget.files?.[0]??null)}/></label>
+ <label>音声の流し方<select value={mixMode} disabled={importing} onChange={e=>setMixMode(e.currentTarget.value as VoiceMixMode)}>
+  <option value="together">同時に重ねる</option>
+  <option value="sequential">一覧の順に流す</option>
+ </select></label>
+ <button type="button" disabled={importing||draftBusy||mixVideos.length<2||!mixImage} onClick={()=>void addVoiceMix()}>合成して本編に追加</button>
+ {mixNotice?<p className="note" role="status">{mixNotice}</p>:null}
+</section>:null}
 <section className="sharedPreview"><div className="previewHeading"><h3>{scrubScene?'🎥 全体プレビュー':openingStill?'🎬 オープニングプレビュー':endingStill?'🌷 エンディングプレビュー':'🎥 全体プレビュー'}</h3>{photos.length>0?<button type="button" onClick={startPreview}>{playing?'■ 停止':previewPosition>0&&previewPosition<total?'▶ ここから再生':'▶ 最初から再生'}</button>:null}</div><div className={'preview '+aspect}><div className={'previewFrame'+(openingStill?' openingStill':'')}>
 {playing&&phase==='photos'&&transitionEffect==='page'&&photos.length>0&&((playIndex===0&&opening==='album')||photos[playIndex-1])?<div key={'turn-'+sceneKey} className="albumFullPageTurn" aria-hidden="true">{playIndex===0?<div className="albumTurnTitlePage"><span>{title}</span></div>:<div className="albumTurnPreviousPage"><div className="albumTurnPhotoClip">{photos[playIndex-1].kind==='video'?<div className="albumTurnVideoPlaceholder">🎞️</div>:<img src={photos[playIndex-1].url} alt="" style={{transform:'scale('+(photos[playIndex-1].zoom??1)+') translate('+(photos[playIndex-1].offsetX??0)+'%,'+(photos[playIndex-1].offsetY??0)+'%)'}}/>}</div>{photos[playIndex-1].caption?<div className="albumTurnCaption" style={{left:(photos[playIndex-1].captionX??50)+'%',top:(photos[playIndex-1].captionY??83)+'%',fontFamily:photos[playIndex-1].captionFont==='cursive'?'Yomogi, cursive':photos[playIndex-1].captionFont??'sans-serif',fontSize:(photos[playIndex-1].captionSize??22)+'px',fontWeight:photos[playIndex-1].captionWeight??700,color:photos[playIndex-1].captionColor??'#fff',background:photos[playIndex-1].captionBackground?'rgba(0,0,0,.58)':'transparent'}}>{photos[playIndex-1].caption}</div>:null}</div>}</div>:null}
 {showOpening&&opening==='album'?<div className="albumCustomTitle"><span>{title}</span></div>:null}

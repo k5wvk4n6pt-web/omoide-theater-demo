@@ -3,7 +3,7 @@ export function clipGainValue(volume:unknown):number {
 }
 
 export type ExportPhoto={subtitles?:{id:string;text:string;start:number;end:number}[];subtitleColor?:string;subtitleSize?:number;subtitleOutline?:string;trimStart?:number;sourceDuration?:number;keepAudio?:boolean;audioVolume?:number;kind?:'image'|'video';url:string;duration:number;effect:'fade'|'zoom'|'slide'|'page'|'heart'|'curtain'|'none'|'wipe'|'slideUp'|'circle'|'blinds'|'flash'|'blur'|'mosaic'|'random';sticker?:string;caption?:string;zoom?:number;offsetX?:number;offsetY?:number;captionX?:number;captionY?:number;captionFont?:string;captionColor?:string;captionSize?:number;captionWeight?:number;captionOutline?:boolean;captionOutlineColor?:string;captionBackground?:boolean;captionMotion?:'none'|'fade'|'rise'|'slide'};
-export type ExportOptions={photos:ExportPhoto[];durations:number[];title:string;ending:string;endingStyle?:'message'|'fuji_graduation'|'none'|'upload';openingMedia?:ExportPhoto|null;endingMedia?:ExportPhoto|null;sticker:string;curtainColor:string;opening:'curtain'|'sparkle'|'sakura'|'album'|'countdown'|'rainbow'|'fade'|'gold_light'|'floral_wedding'|'sakura_tunnel'|'balloon_party'|'starry_story'|'retro_cinema'|'fuji_graduation'|'none'|'upload';aspect:'wide'|'vertical'|'square';bgm:'none'|'gentle'|'bright'|'file';audioUrl?:string;volume:number;bgmStart?:number;bgmOffset?:number;musicSwitches?:{id:string;url:string;start:number;offset:number;volume:number;fade:number}[];pauseBgmDuringVideo?:boolean;onProgress:(p:number)=>void};
+export type ExportOptions={photos:ExportPhoto[];durations:number[];title:string;ending:string;endingStyle?:'message'|'fuji_graduation'|'none'|'upload';openingMedia?:ExportPhoto|null;endingMedia?:ExportPhoto|null;sticker:string;curtainColor:string;opening:'curtain'|'sparkle'|'sakura'|'album'|'countdown'|'rainbow'|'fade'|'gold_light'|'floral_wedding'|'sakura_tunnel'|'balloon_party'|'starry_story'|'retro_cinema'|'fuji_graduation'|'none'|'upload';aspect:'wide'|'vertical'|'square';bgm:'none'|'gentle'|'bright'|'file';audioUrl?:string;voiceMix?:{context:AudioContext;buffer:AudioBuffer};volume:number;bgmStart?:number;bgmOffset?:number;musicSwitches?:{id:string;url:string;start:number;offset:number;volume:number;fade:number}[];pauseBgmDuringVideo?:boolean;onProgress:(p:number)=>void};
 const sleep=(ms:number)=>new Promise<void>(resolve=>setTimeout(resolve,ms));
 function loadImage(url:string){return new Promise<HTMLImageElement>((resolve,reject)=>{const img=new Image();img.onload=()=>resolve(img);img.onerror=()=>reject(new Error('写真を読み込めませんでした'));img.src=url})}
 function drawPageMedia(ctx: CanvasRenderingContext2D, media: HTMLImageElement | HTMLVideoElement | ImageBitmap, w: number, h: number, photo: ExportPhoto, animationScale = 1, animationShift = 0) {
@@ -104,11 +104,17 @@ export async function exportMovie(o:ExportOptions):Promise<{blob:Blob;extension:
 
  const stream=canvas.captureStream(24);
  let ac:AudioContext|null=null,interval:number|undefined,audio:HTMLAudioElement|undefined,bgmGain:GainNode|null=null;
+ let voiceSource:AudioBufferSourceNode|undefined;
  const extraTracks:{audio:HTMLAudioElement;gain:GainNode;start:number;end:number;volume:number;fade:number;started:boolean}[]=[];
  try{
   const hasSourceAudio=o.photos.some(p=>p.kind==='video'&&p.keepAudio!==false);
-  if((o.bgm!=='none'&&o.volume>0)||hasSourceAudio||(o.musicSwitches?.length??0)>0){
-   ac=new AudioContext();const dest=ac.createMediaStreamDestination();
+  if(o.voiceMix||(o.bgm!=='none'&&o.volume>0)||hasSourceAudio||(o.musicSwitches?.length??0)>0){
+   ac=o.voiceMix?.context??new AudioContext();const dest=ac.createMediaStreamDestination();
+   if(o.voiceMix){
+    voiceSource=ac.createBufferSource();
+    voiceSource.buffer=o.voiceMix.buffer;
+    voiceSource.connect(dest);
+   }
    if(hasSourceAudio){videos.forEach((v,i)=>{if(v&&o.photos[i].keepAudio!==false){v.muted=false;const source=ac!.createMediaElementSource(v);const clipGain=ac!.createGain();clipGain.gain.value=clipGainValue(o.photos[i].audioVolume);source.connect(clipGain);clipGain.connect(dest)}})}
    if(o.bgm!=='none'&&o.volume>0){const gain=ac.createGain();bgmGain=gain;gain.gain.value=0;gain.connect(dest);
    if(o.bgm==='file'&&o.audioUrl){audio=new Audio(o.audioUrl);audio.loop=true;const offset=Math.max(0,o.bgmOffset??0);const seek=()=>{try{audio!.currentTime=Math.min(offset,Math.max(0,(audio!.duration||0)-.1))}catch{}};audio.addEventListener('loadedmetadata',seek,{once:true});if(audio.readyState>=1)seek();const src=ac.createMediaElementSource(audio);src.connect(gain);await ac.resume();await audio.play()}
@@ -121,6 +127,7 @@ export async function exportMovie(o:ExportOptions):Promise<{blob:Blob;extension:
   const chunks:BlobPart[]=[];const recorder=startMovieRecorder(stream);
   const mime=recorder.mimeType;
   const result=new Promise<Blob>((resolve,reject)=>{recorder.ondataavailable=e=>{if(e.data.size)chunks.push(e.data)};recorder.onerror=()=>reject(Error('動画の記録中にエラーが発生しました'));recorder.onstop=()=>resolve(new Blob(chunks,{type:mime.split(';')[0]}))});
+  voiceSource?.start();
   let renderedVideoFrames=0;const total=intro+outro+o.durations.reduce((a,b)=>a+b,0);const start=performance.now();
   while(true){
    const elapsed=Math.min((performance.now()-start)/1000,total);const w=canvas.width,h=canvas.height;
@@ -167,5 +174,5 @@ export async function exportMovie(o:ExportOptions):Promise<{blob:Blob;extension:
    await sleep(1000/24);
   }
   await sleep(250);recorder.stop();const blob=await result;if(o.photos.some(p=>p.kind==='video')&&renderedVideoFrames===0)throw Error('動画の映像を取得できませんでした。黒い画面の動画を保存しないため、書き出しを中止しました。');if(!blob.size)throw Error('動画ファイルが空でした');o.onProgress(100);return {blob,extension:mime.includes('mp4')?'mp4':'webm'};
- }finally{if(typeof videos!=='undefined')videos.forEach(v=>v?.pause());if(interval!==undefined)clearInterval(interval);if(audio)audio.pause();if(ac)void ac.close();stream.getTracks().forEach(track=>track.stop())}
+ }finally{if(typeof videos!=='undefined')videos.forEach(v=>v?.pause());if(interval!==undefined)clearInterval(interval);if(audio)audio.pause();if(ac&&ac!==o.voiceMix?.context)void ac.close();stream.getTracks().forEach(track=>track.stop())}
 }
